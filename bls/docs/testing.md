@@ -8,15 +8,21 @@ npm run typecheck   # tsc --noEmit
 npm run build       # next build (catches most SSR/RSC mistakes too)
 ```
 
+## Migration + RLS tests (no Supabase needed)
+
+```bash
+npm test            # embedded Postgres: applies migrations twice, asserts isolation
+```
+
 ## Against a real Supabase project
 
-1. Create a project, then apply the migrations in order — either paste each file into the SQL
+1. Create a project, then apply the migrations (`0001`…`0005`) in order — either paste each file into the SQL
    editor, or `supabase db push` if you have the CLI linked. **Order matters**: `0001_init.sql`
    before `0002_rls.sql` (see `docs/rls.md`).
 2. In the Supabase dashboard, enable the Google provider under Authentication → Providers, and add
    your app's `/auth/callback` URL (both local and deployed) to the redirect allow-list.
 3. Copy `.env.example` to `.env.local` and fill in the project URL, anon key, and service-role key.
-4. `SEED_ENV=development npm run seed` — creates five demo accounts:
+4. `SEED_ENV=development npm run seed` — creates eight demo accounts:
 
    | Role | Email | Password |
    | --- | --- | --- |
@@ -25,6 +31,12 @@ npm run build       # next build (catches most SSR/RSC mistakes too)
    | TEACHER | `teacher@brightlearning.test` | `Passw0rd!23` |
    | STUDENT | `student@brightlearning.test` | `Passw0rd!23` |
    | PARENT | `parent@brightlearning.test` | `Passw0rd!23` |
+   | STUDENT (2nd) | `student2@brightlearning.test` | `Passw0rd!23` |
+   | PARENT (2nd) | `parent2@brightlearning.test` | `Passw0rd!23` |
+   | TEACHER (2nd, unassigned) | `teacher2@brightlearning.test` | `Passw0rd!23` |
+
+   The seed also creates 2025-2026 / Class 5 (sections A, B) / 4 subjects; Tanvir is in 5-A (parent Shirin), Rafi in 5-B
+   (parent Kamal), teacher Nusrat teaches 5-A only. Re-running the seed is safe (upserts).
 
    These are seed-only, non-production credentials by design — see the `SEED_ENV` guard in
    `scripts/seed.ts`, which refuses to run without it.
@@ -35,6 +47,9 @@ npm run build       # next build (catches most SSR/RSC mistakes too)
      (`src/app/dashboard/page.tsx`'s `ROLE_MODULES`).
    - Signing up a brand-new account only ever offers Student/Guardian, and the new account shows a
      "pending review" banner until an admin activates it.
+   - Admin/Organizer: `/dashboard/admin/users` activates a PENDING signup; an Organizer's role dropdown never offers
+     Super Admin/Organizer; academic/people/enrollment pages create and link records.
+   - Student sees only their class; parent sees only their child; teacher sees only 5-A and its students.
    - The language switcher toggles every visible string between English and Bangla, immediately.
 
 ## What "Phase 1 passes" means

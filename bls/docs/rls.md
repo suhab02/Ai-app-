@@ -28,7 +28,7 @@ create successfully earlier in the same script. The likely causes, all guarded a
 Net effect: pasting either file into the SQL editor twice in a row, or resuming after a failure
 partway through, now finishes cleanly instead of leaving the database in a half-built state.
 
-## Policies (Phase 1: `profiles` only)
+## Policies (Phase 1: `profiles`; Phase 2 below)
 
 | Table | RLS | Policies |
 | --- | --- | --- |
@@ -49,6 +49,16 @@ their own `role`/`status`/`display_id`/`id` outside the narrow cases described i
 `docs/authorization.md`. RLS says *which rows* you can touch; the trigger says *which columns* you
 can change on them.
 
+## Phase 2 policies and the helper-function pattern
+
+Every Phase 2 table has RLS enabled. Reads are relationship-scoped; writes are `is_staff()` only (policy
+`<table>_staff_write`, `for all`). The relationship checks live in `SECURITY DEFINER` helpers
+(`owns_student`, `is_guardian_of_student`, `teaches_class_section`, `teaches_student`, `student_in_class_section`,
+`guardian_linked_to_caller_student`, …), never as inline `EXISTS` subqueries inside policies. Reason: an inline
+`EXISTS` on another RLS-protected table runs that table's policies too, and `students` ↔ `student_enrollments` ↔
+`teacher_assignments` reference each other — the helpers bypass RLS for the lookup, so there is no policy
+recursion and each rule reads as one line.
+
 ## `current_profile_role()` and recursion
 
 Any policy on `profiles` that needs to know the caller's role can't just `SELECT role FROM profiles
@@ -58,6 +68,12 @@ the row directly, bypassing RLS, and returns just the role. This is the standard
 Supabase pattern for role-lookup helpers used inside RLS expressions.
 
 ## How to verify RLS is actually working
+
+**No Supabase project needed:** `npm test` (`tests/migrations.test.ts`) boots an embedded Postgres (PGlite) with stubbed
+`auth.uid()`/roles, applies every migration **twice** (idempotency), then asserts the isolation rules — parent A vs B,
+student A vs B, assigned vs unassigned teacher, write lockouts, integrity constraints, and Phase 1 regressions.
+
+**Against a real project:**
 
 ```bash
 SEED_ENV=development npm run seed   # creates 5 demo accounts, one per role
@@ -76,6 +92,5 @@ Phase 1 has:
 - An ORGANIZER can suspend/reactivate a STUDENT account (status change, not role change).
 - A SUPER_ADMIN can read every profile.
 
-Phase 2 will add the student/guardian/teacher cross-tenant tests (parent-can't-see-other-parent's-
-child, etc.) once those tables and their `student_guardians`/`teacher_assignments` relationships
-exist — there is nothing to isolate between yet with `profiles` alone.
+The Phase 2 block in the same file adds: parent A sees only their child (not B's), student A can't see student B, a teacher
+sees only assigned-class students, an unassigned teacher sees none, teacher/student/parent writes are rejected, anon sees nothing.

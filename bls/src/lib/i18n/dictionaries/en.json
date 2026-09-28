@@ -5,14 +5,25 @@
     "loading": "Loading…",
     "save": "Save",
     "cancel": "Cancel",
-    "submit": "Submit"
+    "submit": "Submit",
+    "search": "Search",
+    "all": "All",
+    "create": "Create",
+    "update": "Update",
+    "none": "None",
+    "yes": "Yes",
+    "no": "No"
   },
   "nav": {
     "home": "Home",
     "dashboard": "Dashboard",
     "login": "Log in",
     "signup": "Sign up",
-    "logout": "Log out"
+    "logout": "Log out",
+    "users": "Users",
+    "academic": "Academic",
+    "people": "People",
+    "relationships": "Enrollment"
   },
   "auth": {
     "loginTitle": "Log in to your account",
@@ -61,6 +72,102 @@
   "dashboard": {
     "welcome": "Welcome, {name}",
     "yourId": "Your ID",
-    "comingSoon": "This section is coming in a later phase."
+    "comingSoon": "This section is coming in a later phase.",
+    "myClass": "My class",
+    "myChildren": "My children",
+    "myClasses": "My classes",
+    "roll": "Roll",
+    "noEnrollment": "You are not enrolled in a class yet.",
+    "noChildren": "No children are linked to your account yet.",
+    "noAssignments": "You have no class assignments yet.",
+    "classTeacher": "Class teacher",
+    "studentsInClass": "Students"
+  },
+  "enums": {
+    "gender": {
+      "MALE": "Male",
+      "FEMALE": "Female",
+      "OTHER": "Other"
+    },
+    "relationship": {
+      "FATHER": "Father",
+      "MOTHER": "Mother",
+      "GRANDFATHER": "Grandfather",
+      "GRANDMOTHER": "Grandmother",
+      "UNCLE": "Uncle",
+      "AUNT": "Aunt",
+      "SIBLING": "Sibling",
+      "LEGAL_GUARDIAN": "Legal guardian",
+      "OTHER": "Other"
+    }
+  },
+  "admin": {
+    "users": {
+      "title": "User management",
+      "searchPlaceholder": "Name, email or ID",
+      "allStatuses": "All statuses",
+      "allRoles": "All roles",
+      "noUsers": "No users match."
+    },
+    "academic": {
+      "title": "Academic setup",
+      "years": "Academic years",
+      "classes": "Classes",
+      "sections": "Sections",
+      "subjects": "Subjects",
+      "name": "Name",
+      "nameBn": "Name (Bangla)",
+      "startDate": "Start date",
+      "endDate": "End date",
+      "current": "Current year",
+      "year": "Academic year",
+      "class": "Class",
+      "code": "Code",
+      "capacity": "Capacity",
+      "order": "Order",
+      "empty": "Nothing yet."
+    },
+    "people": {
+      "title": "People",
+      "admissionNumber": "Admission number",
+      "fullName": "Full name",
+      "fullNameBn": "Full name (Bangla)",
+      "dateOfBirth": "Date of birth",
+      "gender": "Gender",
+      "phone": "Phone",
+      "email": "Email",
+      "address": "Address",
+      "occupation": "Occupation",
+      "designation": "Designation",
+      "department": "Department",
+      "accountEmail": "Account email",
+      "linkAccount": "Link account",
+      "linked": "Linked",
+      "unlinked": "No login linked",
+      "empty": "Nothing yet."
+    },
+    "relationships": {
+      "title": "Enrollment & links",
+      "enrollStudent": "Enroll student",
+      "linkGuardian": "Link guardian to student",
+      "assignTeacher": "Assign teacher",
+      "student": "Student",
+      "guardian": "Guardian",
+      "teacher": "Teacher",
+      "subject": "Subject",
+      "section": "Section",
+      "class": "Class",
+      "year": "Academic year",
+      "roll": "Roll number",
+      "relationship": "Relationship",
+      "primary": "Primary guardian",
+      "canPickUp": "Can pick up",
+      "notifications": "Receives notifications",
+      "classTeacher": "Class teacher",
+      "choose": "Choose…",
+      "enrollments": "Enrollments",
+      "assignments": "Teacher assignments",
+      "links": "Guardian links"
+    }
   }
 }

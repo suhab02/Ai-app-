@@ -57,3 +57,8 @@ export async function requireRole(allowed: UserRole[]): Promise<ProfileRow> {
 
   return profile;
 }
+
+/** SUPER_ADMIN or ORGANIZER only. Call first in every admin page and Server Action. */
+export async function requireStaff(): Promise<ProfileRow> {
+  return requireRole(["SUPER_ADMIN", "ORGANIZER"]);
+}

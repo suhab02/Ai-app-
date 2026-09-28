@@ -38,7 +38,23 @@ regardless of role. A `PENDING` or `SUSPENDED` user can still log in (so they ca
 blocked) but sees a status banner instead of dashboard content beyond their own profile; see
 `src/components/status-banner.tsx` and `src/app/dashboard/page.tsx`.
 
-## Planned Phase 2+ scope (not implemented yet)
+## Phase 2 access matrix (enforced by RLS in migrations 0003–0005)
+
+| Data | SUPER_ADMIN / ORGANIZER | TEACHER | STUDENT | PARENT | anon |
+| --- | --- | --- | --- | --- | --- |
+| academic years, classes, sections, subjects | read + write | read | read | read | none |
+| students | read + write | only students actively enrolled in an assigned class/section | own record | only linked children | none |
+| guardians | read + write | none | own linked guardians | own record | none |
+| teachers | read + write | own record | none | none | none |
+| student_enrollments | read + write | those in assigned class/sections | own | linked children's | none |
+| student_guardians | read + write | none | own links | own links | none |
+| teacher_assignments | read + write | own | for their class/section | for their child's class/section | none |
+
+All writes to all Phase 2 tables are SUPER_ADMIN/ORGANIZER only. The admin pages (`/dashboard/admin/*`) call
+`requireStaff()` and every Server Action in `src/lib/admin/actions.ts` calls it again before validating input with Zod;
+RLS is the third, independent check. Nav visibility is UX only.
+
+## Original scope notes (Phase 2+ targets)
 
 - **ORGANIZER**: students, guardians, teachers, classes, sections, subjects, attendance, homework,
   results, timetable, fees, payments, notices, events, gallery, website content. Cannot assign
@@ -49,9 +65,7 @@ blocked) but sees a status banner instead of dashboard content beyond their own 
 - **PARENT**: only their linked children (many-to-many via a future `student_guardians` table);
   never another guardian's child.
 
-None of the tables these depend on (`students`, `teachers`, `classes`, ...) exist yet — Phase 1 only
-has `profiles`. This document describes the target shape so Phase 2's RLS policies have something to
-be reviewed against.
+Phase 2 implements the people/class relationships above; attendance, homework, results and fees (Phase 3+) will reuse the same helper functions.
 
 ## Never trust the client
 

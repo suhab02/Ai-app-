@@ -1,47 +1,56 @@
 import Link from "next/link";
 import type { Dictionary } from "@/lib/i18n/dictionary";
+import { translate } from "@/lib/i18n/dictionary";
+import type { UserRole } from "@/lib/supabase/types";
 
 interface NavItem {
   href: string;
   labelKey: string;
+  roles?: UserRole[];
 }
 
-// One item today — the layout Phase 2 modules (students, attendance, ...)
-// plug into as they land, without changing how the nav itself renders.
-const NAV_ITEMS: NavItem[] = [{ href: "/dashboard", labelKey: "nav.dashboard" }];
+const STAFF: UserRole[] = ["SUPER_ADMIN", "ORGANIZER"];
 
-function label(dictionary: Dictionary, path: string): string {
-  return path.split(".").reduce<unknown>((acc, key) => {
-    return acc && typeof acc === "object" ? (acc as Record<string, unknown>)[key] : undefined;
-  }, dictionary) as string;
+// Visibility here is UX only. Every /dashboard/admin page re-checks the
+// caller with requireStaff() on the server, and RLS re-checks every query.
+const NAV_ITEMS: NavItem[] = [
+  { href: "/dashboard", labelKey: "nav.dashboard" },
+  { href: "/dashboard/admin/users", labelKey: "nav.users", roles: STAFF },
+  { href: "/dashboard/admin/academic", labelKey: "nav.academic", roles: STAFF },
+  { href: "/dashboard/admin/people", labelKey: "nav.people", roles: STAFF },
+  { href: "/dashboard/admin/relationships", labelKey: "nav.relationships", roles: STAFF },
+];
+
+function visibleItems(role: UserRole) {
+  return NAV_ITEMS.filter((item) => !item.roles || item.roles.includes(role));
 }
 
-export function Sidebar({ dictionary }: { dictionary: Dictionary }) {
+export function Sidebar({ dictionary, role }: { dictionary: Dictionary; role: UserRole }) {
   return (
     <aside className="hidden w-56 shrink-0 flex-col gap-1 border-r border-slate-200 bg-surface-card p-4 sm:flex">
-      {NAV_ITEMS.map((item) => (
+      {visibleItems(role).map((item) => (
         <Link
           key={item.href}
           href={item.href}
           className="rounded-xl px-3 py-2.5 text-sm font-medium text-brand-navy hover:bg-brand-green-light"
         >
-          {label(dictionary, item.labelKey)}
+          {translate(dictionary, item.labelKey)}
         </Link>
       ))}
     </aside>
   );
 }
 
-export function BottomNav({ dictionary }: { dictionary: Dictionary }) {
+export function BottomNav({ dictionary, role }: { dictionary: Dictionary; role: UserRole }) {
   return (
     <nav className="fixed inset-x-0 bottom-0 z-10 flex border-t border-slate-200 bg-surface-card sm:hidden">
-      {NAV_ITEMS.map((item) => (
+      {visibleItems(role).map((item) => (
         <Link
           key={item.href}
           href={item.href}
-          className="flex flex-1 flex-col items-center gap-0.5 py-2.5 text-xs font-medium text-brand-navy"
+          className="flex flex-1 flex-col items-center gap-0.5 py-3 text-[11px] font-medium text-brand-navy"
         >
-          {label(dictionary, item.labelKey)}
+          {translate(dictionary, item.labelKey)}
         </Link>
       ))}
     </nav>

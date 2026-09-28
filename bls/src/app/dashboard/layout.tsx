@@ -18,7 +18,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   return (
     <div className="flex min-h-full flex-1">
-      <Sidebar dictionary={dictionary} />
+      <Sidebar dictionary={dictionary} role={profile.role} />
       <div className="flex flex-1 flex-col">
         <header className="flex items-center justify-between border-b border-slate-200 bg-surface-card px-4 py-3 sm:px-6">
           <span className="text-base font-semibold text-brand-navy">{dictionary.common.appName}</span>
@@ -32,7 +32,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
           {children}
         </main>
       </div>
-      <BottomNav dictionary={dictionary} />
+      <BottomNav dictionary={dictionary} role={profile.role} />
     </div>
   );
 }

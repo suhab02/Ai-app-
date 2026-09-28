@@ -28,6 +28,9 @@ const DEMO = {
   teacher: "teacher@brightlearning.test",
   student: "student@brightlearning.test",
   parent: "parent@brightlearning.test",
+  student2: "student2@brightlearning.test",
+  parent2: "parent2@brightlearning.test",
+  teacher2: "teacher2@brightlearning.test",
 } as const;
 
 async function signedInClient(email: string): Promise<SupabaseClient> {
@@ -144,5 +147,77 @@ describe.runIf(hasEnv)("profiles RLS", () => {
     const { data, error } = await admin.from("profiles").select("id");
     expect(error).toBeNull();
     expect((data ?? []).length).toBeGreaterThanOrEqual(5);
+  });
+});
+
+describe.runIf(hasEnv)("school data RLS (Phase 2)", () => {
+  it("parent A sees only their own child, never parent B's", async () => {
+    const parent = await signedInClient(DEMO.parent);
+    const { data } = await parent.from("students").select("admission_number");
+    expect(data?.map((s) => s.admission_number)).toEqual(["BLS-ADM-0001"]);
+
+    const links = await parent.from("student_guardians").select("student_id");
+    expect(links.data).toHaveLength(1);
+
+    const guardians = await parent.from("guardians").select("full_name");
+    expect(guardians.data?.map((g) => g.full_name)).toEqual(["Shirin Akter"]);
+  });
+
+  it("parent B cannot see parent A's child", async () => {
+    const parent2 = await signedInClient(DEMO.parent2);
+    const { data } = await parent2.from("students").select("admission_number");
+    expect(data?.map((s) => s.admission_number)).toEqual(["BLS-ADM-0002"]);
+  });
+
+  it("student A cannot see student B", async () => {
+    const student = await signedInClient(DEMO.student);
+    const { data } = await student.from("students").select("admission_number");
+    expect(data?.map((s) => s.admission_number)).toEqual(["BLS-ADM-0001"]);
+
+    const enrollments = await student.from("student_enrollments").select("id");
+    expect(enrollments.data).toHaveLength(1);
+  });
+
+  it("a teacher sees only students in their assigned class/section", async () => {
+    const teacher = await signedInClient(DEMO.teacher);
+    const { data } = await teacher.from("students").select("admission_number");
+    expect(data?.map((s) => s.admission_number)).toEqual(["BLS-ADM-0001"]);
+
+    const guardians = await teacher.from("guardians").select("id");
+    expect(guardians.data).toHaveLength(0);
+  });
+
+  it("an unassigned teacher sees no students", async () => {
+    const teacher2 = await signedInClient(DEMO.teacher2);
+    const { data } = await teacher2.from("students").select("id");
+    expect(data).toHaveLength(0);
+  });
+
+  it("teachers, students and parents cannot write school data", async () => {
+    for (const email of [DEMO.teacher, DEMO.student, DEMO.parent]) {
+      const client = await signedInClient(email);
+      const insert = await client.from("subjects").insert({ code: "HACK", name: "Hack" });
+      expect(insert.error).not.toBeNull();
+
+      const update = await client.from("students").update({ full_name: "Hacked" }).select();
+      expect(update.data ?? []).toHaveLength(0);
+
+      const del = await client.from("student_guardians").delete().select();
+      expect(del.data ?? []).toHaveLength(0);
+    }
+  });
+
+  it("logged-out users see no school data", async () => {
+    for (const table of ["students", "guardians", "teachers", "student_enrollments"] as const) {
+      const { data, error } = await anonClient().from(table).select("id");
+      expect(error || (data ?? []).length === 0).toBeTruthy();
+    }
+  });
+
+  it("organizers can read every student", async () => {
+    const organizer = await signedInClient(DEMO.organizer);
+    const { data, error } = await organizer.from("students").select("id");
+    expect(error).toBeNull();
+    expect((data ?? []).length).toBeGreaterThanOrEqual(2);
   });
 });

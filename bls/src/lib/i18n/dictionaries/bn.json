@@ -5,14 +5,25 @@
     "loading": "লোড হচ্ছে…",
     "save": "সংরক্ষণ করুন",
     "cancel": "বাতিল",
-    "submit": "জমা দিন"
+    "submit": "জমা দিন",
+    "search": "অনুসন্ধান",
+    "all": "সব",
+    "create": "তৈরি করুন",
+    "update": "হালনাগাদ",
+    "none": "কিছু নেই",
+    "yes": "হ্যাঁ",
+    "no": "না"
   },
   "nav": {
     "home": "হোম",
     "dashboard": "ড্যাশবোর্ড",
     "login": "লগ ইন",
     "signup": "নিবন্ধন",
-    "logout": "লগ আউট"
+    "logout": "লগ আউট",
+    "users": "ব্যবহারকারী",
+    "academic": "একাডেমিক",
+    "people": "ব্যক্তি",
+    "relationships": "ভর্তি"
   },
   "auth": {
     "loginTitle": "আপনার অ্যাকাউন্টে লগ ইন করুন",
@@ -61,6 +72,102 @@
   "dashboard": {
     "welcome": "স্বাগতম, {name}",
     "yourId": "আপনার আইডি",
-    "comingSoon": "এই অংশটি পরবর্তী ধাপে আসছে।"
+    "comingSoon": "এই অংশটি পরবর্তী ধাপে আসছে।",
+    "myClass": "আমার শ্রেণি",
+    "myChildren": "আমার সন্তান",
+    "myClasses": "আমার শ্রেণিসমূহ",
+    "roll": "রোল",
+    "noEnrollment": "আপনি এখনও কোনো শ্রেণিতে ভর্তি নন।",
+    "noChildren": "আপনার অ্যাকাউন্টে এখনও কোনো সন্তান যুক্ত নেই।",
+    "noAssignments": "আপনার এখনও কোনো শ্রেণি নিয়োগ নেই।",
+    "classTeacher": "শ্রেণি শিক্ষক",
+    "studentsInClass": "শিক্ষার্থী"
+  },
+  "enums": {
+    "gender": {
+      "MALE": "পুরুষ",
+      "FEMALE": "নারী",
+      "OTHER": "অন্যান্য"
+    },
+    "relationship": {
+      "FATHER": "পিতা",
+      "MOTHER": "মাতা",
+      "GRANDFATHER": "দাদা/নানা",
+      "GRANDMOTHER": "দাদি/নানি",
+      "UNCLE": "চাচা/মামা",
+      "AUNT": "চাচি/খালা",
+      "SIBLING": "ভাই/বোন",
+      "LEGAL_GUARDIAN": "আইনি অভিভাবক",
+      "OTHER": "অন্যান্য"
+    }
+  },
+  "admin": {
+    "users": {
+      "title": "ব্যবহারকারী ব্যবস্থাপনা",
+      "searchPlaceholder": "নাম, ইমেইল বা আইডি",
+      "allStatuses": "সব অবস্থা",
+      "allRoles": "সব ভূমিকা",
+      "noUsers": "কোনো ব্যবহারকারী পাওয়া যায়নি।"
+    },
+    "academic": {
+      "title": "একাডেমিক সেটআপ",
+      "years": "শিক্ষাবর্ষ",
+      "classes": "শ্রেণি",
+      "sections": "শাখা",
+      "subjects": "বিষয়",
+      "name": "নাম",
+      "nameBn": "নাম (বাংলা)",
+      "startDate": "শুরুর তারিখ",
+      "endDate": "শেষের তারিখ",
+      "current": "চলমান বর্ষ",
+      "year": "শিক্ষাবর্ষ",
+      "class": "শ্রেণি",
+      "code": "কোড",
+      "capacity": "ধারণক্ষমতা",
+      "order": "ক্রম",
+      "empty": "এখনও কিছু নেই।"
+    },
+    "people": {
+      "title": "ব্যক্তি",
+      "admissionNumber": "ভর্তি নম্বর",
+      "fullName": "পূর্ণ নাম",
+      "fullNameBn": "পূর্ণ নাম (বাংলা)",
+      "dateOfBirth": "জন্ম তারিখ",
+      "gender": "লিঙ্গ",
+      "phone": "ফোন",
+      "email": "ইমেইল",
+      "address": "ঠিকানা",
+      "occupation": "পেশা",
+      "designation": "পদবি",
+      "department": "বিভাগ",
+      "accountEmail": "অ্যাকাউন্টের ইমেইল",
+      "linkAccount": "অ্যাকাউন্ট সংযুক্ত করুন",
+      "linked": "সংযুক্ত",
+      "unlinked": "লগইন সংযুক্ত নেই",
+      "empty": "এখনও কিছু নেই।"
+    },
+    "relationships": {
+      "title": "ভর্তি ও সংযোগ",
+      "enrollStudent": "শিক্ষার্থী ভর্তি করুন",
+      "linkGuardian": "শিক্ষার্থীর সাথে অভিভাবক যুক্ত করুন",
+      "assignTeacher": "শিক্ষক নিয়োগ দিন",
+      "student": "শিক্ষার্থী",
+      "guardian": "অভিভাবক",
+      "teacher": "শিক্ষক",
+      "subject": "বিষয়",
+      "section": "শাখা",
+      "class": "শ্রেণি",
+      "year": "শিক্ষাবর্ষ",
+      "roll": "রোল নম্বর",
+      "relationship": "সম্পর্ক",
+      "primary": "প্রধান অভিভাবক",
+      "canPickUp": "নিয়ে যেতে পারবেন",
+      "notifications": "নোটিফিকেশন পাবেন",
+      "classTeacher": "শ্রেণি শিক্ষক",
+      "choose": "বেছে নিন…",
+      "enrollments": "ভর্তি তালিকা",
+      "assignments": "শিক্ষক নিয়োগ",
+      "links": "অভিভাবক সংযোগ"
+    }
   }
 }

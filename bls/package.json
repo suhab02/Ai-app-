@@ -9,7 +9,9 @@
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
     "seed": "tsx scripts/seed.ts",
-    "test:rls": "vitest run tests/rls-smoke.test.ts"
+    "test:rls": "vitest run tests/rls-smoke.test.ts",
+    "test:migrations": "vitest run tests/migrations.test.ts",
+    "test": "vitest run tests/migrations.test.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",
@@ -20,6 +22,7 @@
     "zod": "^4.6.5"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "^0.5.8",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^22.20.4",
     "@types/react": "^19",

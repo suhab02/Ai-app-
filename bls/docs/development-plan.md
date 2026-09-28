@@ -23,17 +23,18 @@ manual demo-account check) before the next one starts, and always waits for expl
 enrollment, attendance, homework, exams, results, timetable, fees, payments, receipts, notices,
 events, gallery, admissions, public website content, mobile app.
 
-## Phase 2 — Core school data model (not started; requires explicit "Start Phase 2")
+## Phase 2 — Core school data model (done — awaiting verification against a live Supabase project)
 
-- `academic_years`, `classes`, `sections`, `subjects`
-- `students`, `guardians`, `teachers` (profile extensions)
-- `student_enrollments` (keeps enrollment history — never overwrite a student's class)
-- `student_guardians` (many-to-many, `is_primary`, `can_pick_up`, `receives_notifications`)
-- `teacher_assignments` (class/section/subject, `is_class_teacher`)
-- User management UI for SUPER_ADMIN/ORGANIZER (activate PENDING accounts, assign roles within
-  their authority, link guardians to students)
+- [x] `academic_years`, `classes`, `sections`, `subjects`
+- [x] `students`, `guardians`, `teachers` (optional profile link, role-checked by trigger)
+- [x] `student_enrollments` (keeps history), `student_guardians` (many-to-many), `teacher_assignments`
+- [x] RLS: relationship-scoped reads via SECURITY DEFINER helpers; staff-only writes
+- [x] Admin UI: user management (activate/suspend/role), academic setup, people, enrollment & links
+- [x] Student/parent/teacher dashboards show their real class/children/assignments
+- [x] Embedded-Postgres migration + RLS test (`npm test`) and live smoke tests (`npm run test:rls`)
+- Not in Phase 2: editing/deleting records in the UI, photo/document uploads, bulk import, pagination
 
-## Phase 3+ (future, order not yet fixed)
+## Phase 3+ (not started; requires explicit "Start Phase 3")
 
 Attendance → Homework → Exams/Results/Report cards → Timetable → Fees/Payments/Receipts →
 Notices/Events/Gallery → Admissions/public website/CMS → React Native/Expo mobile app.
