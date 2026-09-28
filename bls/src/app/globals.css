@@ -1,0 +1,32 @@
+@import "tailwindcss";
+
+:root {
+  --background: #f7f9fc;
+  --foreground: #10243e;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+
+  /* Bright Learning School brand palette — green/navy/orange, never a
+     copy of any third-party school platform's exact branding. */
+  --color-brand-green: #1f9d55;
+  --color-brand-green-dark: #167a42;
+  --color-brand-green-light: #e6f6ec;
+  --color-brand-navy: #10243e;
+  --color-brand-navy-light: #1b3a5c;
+  --color-brand-orange: #f5891b;
+  --color-brand-orange-dark: #d9730a;
+  --color-brand-orange-light: #fef1e2;
+  --color-surface: #f7f9fc;
+  --color-surface-card: #ffffff;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+}

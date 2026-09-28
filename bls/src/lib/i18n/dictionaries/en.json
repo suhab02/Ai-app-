@@ -1,0 +1,66 @@
+{
+  "common": {
+    "appName": "Bright Learning School",
+    "language": "Language",
+    "loading": "Loading…",
+    "save": "Save",
+    "cancel": "Cancel",
+    "submit": "Submit"
+  },
+  "nav": {
+    "home": "Home",
+    "dashboard": "Dashboard",
+    "login": "Log in",
+    "signup": "Sign up",
+    "logout": "Log out"
+  },
+  "auth": {
+    "loginTitle": "Log in to your account",
+    "signupTitle": "Create your account",
+    "fullName": "Full name",
+    "email": "Email",
+    "password": "Password",
+    "iAmA": "I am a",
+    "continueWithGoogle": "Continue with Google",
+    "orDivider": "or",
+    "haveAccount": "Already have an account?",
+    "noAccount": "Don't have an account?",
+    "signupNotice": "Teacher, Organizer and Super Admin access is granted by the school, not by sign-up. New accounts start as Student or Parent and are reviewed before full access is enabled."
+  },
+  "roles": {
+    "SUPER_ADMIN": "Super Admin",
+    "ORGANIZER": "Organizer",
+    "TEACHER": "Teacher",
+    "STUDENT": "Student",
+    "PARENT": "Guardian"
+  },
+  "status": {
+    "PENDING": "Pending review",
+    "ACTIVE": "Active",
+    "INACTIVE": "Inactive",
+    "SUSPENDED": "Suspended",
+    "ARCHIVED": "Archived",
+    "pendingBanner": "Your account is pending review by the school. Some features are unavailable until an administrator activates your account.",
+    "suspendedBanner": "Your account has been suspended. Please contact the school office."
+  },
+  "domain": {
+    "students": "Students",
+    "teachers": "Teachers",
+    "guardians": "Guardians",
+    "attendance": "Attendance",
+    "homework": "Homework",
+    "results": "Results",
+    "timetable": "Timetable",
+    "fees": "Fees",
+    "payments": "Payments",
+    "receipt": "Receipt",
+    "notices": "Notices",
+    "events": "Events",
+    "gallery": "Gallery"
+  },
+  "dashboard": {
+    "welcome": "Welcome, {name}",
+    "yourId": "Your ID",
+    "comingSoon": "This section is coming in a later phase."
+  }
+}
