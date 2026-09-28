@@ -15,6 +15,8 @@ const STAFF: UserRole[] = ["SUPER_ADMIN", "ORGANIZER"];
 // caller with requireStaff() on the server, and RLS re-checks every query.
 const NAV_ITEMS: NavItem[] = [
   { href: "/dashboard", labelKey: "nav.dashboard" },
+  { href: "/dashboard/attendance", labelKey: "domain.attendance" },
+  { href: "/dashboard/homework", labelKey: "domain.homework" },
   { href: "/dashboard/admin/users", labelKey: "nav.users", roles: STAFF },
   { href: "/dashboard/admin/academic", labelKey: "nav.academic", roles: STAFF },
   { href: "/dashboard/admin/people", labelKey: "nav.people", roles: STAFF },
@@ -43,12 +45,12 @@ export function Sidebar({ dictionary, role }: { dictionary: Dictionary; role: Us
 
 export function BottomNav({ dictionary, role }: { dictionary: Dictionary; role: UserRole }) {
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-10 flex border-t border-slate-200 bg-surface-card sm:hidden">
+    <nav className="fixed inset-x-0 bottom-0 z-10 flex overflow-x-auto border-t border-slate-200 bg-surface-card sm:hidden">
       {visibleItems(role).map((item) => (
         <Link
           key={item.href}
           href={item.href}
-          className="flex flex-1 flex-col items-center gap-0.5 py-3 text-[11px] font-medium text-brand-navy"
+          className="flex min-w-[76px] flex-1 shrink-0 flex-col items-center gap-0.5 py-3 text-[11px] font-medium text-brand-navy"
         >
           {translate(dictionary, item.labelKey)}
         </Link>

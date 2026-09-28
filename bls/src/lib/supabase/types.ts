@@ -34,6 +34,8 @@ export type GuardianRelationship =
 
 export type Gender = "MALE" | "FEMALE" | "OTHER";
 
+export type AttendanceStatus = "PRESENT" | "ABSENT" | "LATE" | "EXCUSED" | "LEAVE";
+
 export type ProfileRow = {
   id: string;
   display_id: string;
@@ -179,6 +181,35 @@ export type TeacherAssignmentRow = {
   created_at: string;
 };
 
+export type AttendanceRecordRow = {
+  id: string;
+  student_id: string;
+  academic_year_id: string;
+  class_id: string;
+  section_id: string;
+  attendance_date: string;
+  status: AttendanceStatus;
+  note: string | null;
+  marked_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type HomeworkRow = {
+  id: string;
+  academic_year_id: string;
+  class_id: string;
+  section_id: string;
+  subject_id: string;
+  teacher_id: string | null;
+  title: string;
+  description: string | null;
+  assigned_date: string;
+  due_date: string;
+  created_at: string;
+  updated_at: string;
+};
+
 type Table<Row, Required extends keyof Row = never> = {
   Row: Row;
   Insert: Partial<Row> & Pick<Row, Required>;
@@ -205,6 +236,14 @@ export interface Database {
       teacher_assignments: Table<
         TeacherAssignmentRow,
         "teacher_id" | "academic_year_id" | "class_id" | "section_id" | "subject_id"
+      >;
+      attendance_records: Table<
+        AttendanceRecordRow,
+        "student_id" | "academic_year_id" | "class_id" | "section_id" | "attendance_date" | "status"
+      >;
+      homework: Table<
+        HomeworkRow,
+        "academic_year_id" | "class_id" | "section_id" | "subject_id" | "title" | "due_date"
       >;
     };
     Views: Record<string, never>;

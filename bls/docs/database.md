@@ -20,7 +20,10 @@ file after a partial failure finishes the job instead of erroring on "already ex
 - `0005_relationships.sql` — `student_enrollments`, `student_guardians`, `teacher_assignments`, class/section/year
   consistency trigger, relationship helpers, and the relationship-scoped SELECT policies.
 
-**Apply order matters**: run `0001` → `0005` in order; each depends on the previous ones.
+- `0006_attendance.sql` — `attendance_status` enum, `school_today()`, `attendance_records`, `validate_attendance()` trigger, RLS.
+- `0007_homework.sql` — `teaches_subject()` helper, `homework`, RLS.
+
+**Apply order matters**: run `0001` → `0007` in order; each depends on the previous ones.
 
 ## Schema (Phase 1)
 
@@ -64,6 +67,21 @@ section isn't in that class.
 **Why `profile_id` is nullable:** staff can create a student/guardian/teacher record before the person has a login,
 then link an account by email. This keeps the service-role key out of the web request path. When set, the
 `enforce_profile_role()` trigger requires the profile's role to be STUDENT / PARENT / TEACHER respectively.
+
+## Schema (Phase 3)
+
+| Table | Key columns / constraints |
+| --- | --- |
+| `attendance_records` | one row per student per day: `unique(student_id, attendance_date)`; `status` = PRESENT / ABSENT / LATE / EXCUSED / LEAVE; `academic_year_id`, `class_id`, `section_id` copied from the student's ACTIVE enrollment at marking time (history survives a later section change); `marked_by` → `profiles`, set from the session by trigger |
+| `homework` | (year, class, section, subject); nullable `teacher_id` (NULL = posted by staff); `due_date >= assigned_date` |
+
+`validate_attendance()` (runs for every writer, staff included): the student must have an ACTIVE enrollment in that
+year/class/section; no future dates; only `status`/`note` can change after insert; `marked_by := auth.uid()` so a client
+can never forge who marked a record.
+
+**School time zone:** "today" is `public.school_today()` = `now() at time zone 'Asia/Dhaka'`. The database runs in UTC, and
+Dhaka is UTC+6, so plain `current_date` would reject "today" for the first six hours of every school morning. Change the
+zone in that one function (and `src/lib/school/date.ts`) if the school is elsewhere.
 
 ## Design choices worth knowing
 

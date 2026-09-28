@@ -4,8 +4,8 @@ import { revalidatePath } from "next/cache";
 import * as z from "zod";
 import { requireStaff } from "@/lib/auth/dal";
 import { createClient } from "@/lib/supabase/server";
-
-export type ActionResult = { ok?: string; error?: string } | undefined;
+import { fields, friendly, zodMessage, type ActionResult } from "@/lib/server-actions";
+import { resolveSection } from "@/lib/school/resolve";
 
 // Every action: (1) requireStaff() re-checks the caller server-side,
 // (2) Zod validates the input, (3) Postgres RLS/triggers are the final gate.
@@ -28,21 +28,6 @@ const checkbox = z
   .optional()
   .transform((v) => v === "on" || v === "true");
 
-function fields(formData: FormData): Record<string, string> {
-  const out: Record<string, string> = {};
-  for (const [key, value] of formData.entries()) {
-    if (typeof value === "string") out[key] = value;
-  }
-  return out;
-}
-
-function friendly(error: { code?: string; message: string }): string {
-  if (error.code === "23505") return "That value already exists.";
-  if (error.code === "23503") return "A referenced record does not exist.";
-  if (error.code === "42501") return "You are not allowed to do that.";
-  return error.message;
-}
-
 async function run<S extends z.ZodType>(
   formData: FormData,
   schema: S,
@@ -57,7 +42,7 @@ async function run<S extends z.ZodType>(
 
   const parsed = schema.safeParse(fields(formData));
   if (!parsed.success) {
-    return { error: parsed.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; ") };
+    return { error: zodMessage(parsed.error) };
   }
 
   const db = await createClient();
@@ -272,29 +257,6 @@ export async function linkAccount(_prev: ActionResult, formData: FormData): Prom
 }
 
 // -------------------------------------------------------- relationships
-
-type Db = Awaited<ReturnType<typeof createClient>>;
-
-// The form picks one section; the class and academic year are derived from it,
-// so an inconsistent year/class/section combination cannot be submitted.
-type DbError = { code?: string; message: string };
-type ResolvedSection =
-  | { ok: true; sectionId: string; classId: string; academicYearId: string }
-  | { ok: false; error: DbError };
-
-async function resolveSection(db: Db, sectionId: string): Promise<ResolvedSection> {
-  const { data: section, error } = await db.from("sections").select("id, class_id").eq("id", sectionId).maybeSingle();
-  if (error) return { ok: false, error };
-  if (!section) return { ok: false, error: { message: "Section not found." } };
-  const { data: cls, error: classError } = await db
-    .from("classes")
-    .select("id, academic_year_id")
-    .eq("id", section.class_id)
-    .maybeSingle();
-  if (classError) return { ok: false, error: classError };
-  if (!cls) return { ok: false, error: { message: "Class not found." } };
-  return { ok: true, sectionId: section.id, classId: cls.id, academicYearId: cls.academic_year_id };
-}
 
 const EnrollSchema = z.object({ studentId: uuid, sectionId: uuid, rollNumber: optionalText });
 

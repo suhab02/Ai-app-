@@ -34,9 +34,17 @@ events, gallery, admissions, public website content, mobile app.
 - [x] Embedded-Postgres migration + RLS test (`npm test`) and live smoke tests (`npm run test:rls`)
 - Not in Phase 2: editing/deleting records in the UI, photo/document uploads, bulk import, pagination
 
-## Phase 3+ (not started; requires explicit "Start Phase 3")
+## Phase 3 — Attendance + Homework (done — awaiting verification against a live Supabase project)
 
-Attendance → Homework → Exams/Results/Report cards → Timetable → Fees/Payments/Receipts →
+- [x] Daily attendance (PRESENT/ABSENT/LATE/EXCUSED/LEAVE): teacher roster (section + date), student/parent summary, calendar and history
+- [x] Homework: teachers post for their assigned (section, subject); students/parents see their section's items with overdue/due-today/upcoming
+- [x] RLS + integrity triggers (enrollment match, no future dates, immutable identity, session-derived `marked_by`)
+- [x] Embedded-Postgres tests incl. the upsert path; live smoke tests; `attendanceSummary` unit tests
+- Not in Phase 3: homework attachments and student submissions (need a private Storage bucket + policies), per-period/per-subject attendance, attendance reports/export, absence notifications to guardians, editing homework in the UI
+
+## Phase 4+ (not started; requires explicit "Start Phase 4")
+
+Exams/Results/Report cards → Timetable → Fees/Payments/Receipts →
 Notices/Events/Gallery → Admissions/public website/CMS → React Native/Expo mobile app.
 
 ## Working rules carried into every phase

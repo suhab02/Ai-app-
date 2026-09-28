@@ -3,7 +3,7 @@
 import { useActionState } from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils/cn";
-import type { ActionResult } from "@/lib/admin/actions";
+import type { ActionResult } from "@/lib/server-actions";
 
 type Action = (prev: ActionResult, formData: FormData) => Promise<ActionResult>;
 

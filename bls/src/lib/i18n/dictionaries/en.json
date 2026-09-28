@@ -81,7 +81,8 @@
     "noChildren": "No children are linked to your account yet.",
     "noAssignments": "You have no class assignments yet.",
     "classTeacher": "Class teacher",
-    "studentsInClass": "Students"
+    "studentsInClass": "Students",
+    "open": "Open"
   },
   "enums": {
     "gender": {
@@ -169,5 +170,57 @@
       "assignments": "Teacher assignments",
       "links": "Guardian links"
     }
+  },
+  "attendance": {
+    "title": "Attendance",
+    "take": "Take attendance",
+    "section": "Class section",
+    "date": "Date",
+    "load": "Load",
+    "noSections": "You are not assigned to any class section yet.",
+    "noStudents": "No students are enrolled in this section.",
+    "save": "Save attendance",
+    "alreadyMarked": "Attendance for this date is already saved; saving again updates it.",
+    "statuses": {
+      "PRESENT": "Present",
+      "ABSENT": "Absent",
+      "LATE": "Late",
+      "EXCUSED": "Excused",
+      "LEAVE": "Leave"
+    },
+    "totalDays": "Total days",
+    "present": "Present",
+    "absent": "Absent",
+    "late": "Late",
+    "excused": "Excused",
+    "leave": "Leave",
+    "percentage": "Attendance",
+    "noData": "No attendance recorded yet.",
+    "calendar": "Calendar",
+    "history": "History",
+    "prev": "Previous",
+    "next": "Next",
+    "noChildren": "No children are linked to your account yet.",
+    "rule": "Attendance % = (present + late) ÷ (present + late + absent). Excused and leave days are not counted against the student."
+  },
+  "homework": {
+    "title": "Homework",
+    "post": "Post homework",
+    "classSubject": "Class & subject",
+    "section": "Class section",
+    "subject": "Subject",
+    "titleField": "Title",
+    "description": "Description",
+    "dueDate": "Due date",
+    "submit": "Post",
+    "delete": "Delete",
+    "overdue": "Overdue",
+    "dueToday": "Due today",
+    "upcoming": "Upcoming",
+    "noHomework": "No homework yet.",
+    "noAssignments": "You have no class assignments, so you cannot post homework yet.",
+    "due": "Due",
+    "postedByOffice": "Posted by the school office",
+    "choose": "Choose…"
   }
 }

@@ -247,6 +247,7 @@ async function seedSchoolData(admin: Admin, profileIds: Record<string, string>) 
     { email: "teacher@brightlearning.test", name: "Nusrat Jahan", nameBn: "নুসরাত জাহান", assign: true },
     { email: "teacher2@brightlearning.test", name: "Imran Hossain", nameBn: "ইমরান হোসেন", assign: false },
   ];
+  let assignedTeacherId: string | undefined;
   for (const t of teacherPeople) {
     const row = await must(
       `teacher ${t.email}`,
@@ -260,6 +261,7 @@ async function seedSchoolData(admin: Admin, profileIds: Record<string, string>) 
         .single(),
     );
     if (!t.assign) continue;
+    assignedTeacherId = row.id;
     for (const code of ["MATH", "ENG"]) {
       const { error } = await admin.from("teacher_assignments").upsert(
         {
@@ -276,7 +278,81 @@ async function seedSchoolData(admin: Admin, profileIds: Record<string, string>) 
     }
   }
 
+  await seedAttendanceAndHomework({ admin, yearId: year.id, classId: cls.id, sections, subjects, studentIds, teacherId: assignedTeacherId });
+
   console.log("\nSchool data ready: 2025-2026 / Class 5 (A, B) / 4 subjects / 2 students / 2 guardians / 2 teachers");
+}
+
+
+/** Dhaka calendar date `offset` days from today (school runs on Asia/Dhaka, UTC+6). */
+function schoolDate(offset: number): string {
+  return new Date(Date.now() + 6 * 3600 * 1000 + offset * 86400 * 1000).toISOString().slice(0, 10);
+}
+
+/**
+ * Phase 3 sample data: five days of attendance for both students and two
+ * homework items for 5-A. Upserts / check-then-insert, so re-running is safe.
+ */
+async function seedAttendanceAndHomework(args: {
+  admin: Admin;
+  yearId: string;
+  classId: string;
+  sections: Record<string, string>;
+  subjects: Record<string, string>;
+  studentIds: Record<string, string>;
+  teacherId: string | undefined;
+}) {
+  const { admin, yearId, classId, sections, subjects, studentIds, teacherId } = args;
+
+  const patterns = [
+    { email: "student@brightlearning.test", section: "A", statuses: ["PRESENT", "PRESENT", "LATE", "ABSENT", "PRESENT"] as const },
+    { email: "student2@brightlearning.test", section: "B", statuses: ["PRESENT", "LEAVE", "PRESENT", "PRESENT", "EXCUSED"] as const },
+  ];
+  for (const p of patterns) {
+    for (const [i, status] of p.statuses.entries()) {
+      const { error } = await admin.from("attendance_records").upsert(
+        {
+          student_id: studentIds[p.email],
+          academic_year_id: yearId,
+          class_id: classId,
+          section_id: sections[p.section],
+          attendance_date: schoolDate(-(p.statuses.length - i)),
+          status,
+        },
+        { onConflict: "student_id,attendance_date" },
+      );
+      if (error) throw error;
+    }
+  }
+
+  const items = [
+    { code: "MATH", title: "Chapter 3 exercises 1–10", description: "Show your working.", due: schoolDate(2) },
+    { code: "ENG", title: "Write a paragraph about your school", description: "Around 100 words.", due: schoolDate(4) },
+  ];
+  for (const item of items) {
+    const { data: existing, error } = await admin
+      .from("homework")
+      .select("id")
+      .eq("section_id", sections.A)
+      .eq("subject_id", subjects[item.code])
+      .eq("title", item.title)
+      .maybeSingle();
+    if (error) throw error;
+    if (existing) continue;
+    const { error: insertError } = await admin.from("homework").insert({
+      academic_year_id: yearId,
+      class_id: classId,
+      section_id: sections.A,
+      subject_id: subjects[item.code],
+      teacher_id: teacherId ?? null,
+      title: item.title,
+      description: item.description,
+      due_date: item.due,
+    });
+    if (insertError) throw insertError;
+  }
+
+  console.log("Attendance (5 days x 2 students) and 2 homework items ready");
 }
 
 main().catch((error) => {

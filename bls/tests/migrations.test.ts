@@ -146,6 +146,96 @@ await as("organizer", async () => {
   check("organizer can insert academic year", !(await tryErr(`insert into academic_years(name,start_date,end_date) values ('2026-2027','2026-01-01','2026-12-31')`)));
   check("organizer can insert subject", !(await tryErr(`insert into subjects(code,name) values ('ENG','English')`)));
 });
+// ---- Phase 3: attendance + homework ------------------------------------
+const dstr = async (offset: number) =>
+  (await db.query<{ d: string }>(`select to_char(public.school_today() + ${offset}, 'YYYY-MM-DD') as d`)).rows[0].d;
+const today = await dstr(0);
+const yesterday = await dstr(-1);
+const twoDaysAgo = await dstr(-2);
+const tomorrow = await dstr(1);
+const t2 = await one(`select id from teachers where full_name='Teacher Two'`);
+const count = async (sql: string) => (await db.query(sql)).rows.length;
+
+await db.query(`insert into attendance_records(student_id,academic_year_id,class_id,section_id,attendance_date,status) values
+  ($1,$3,$4,$5,'${yesterday}','PRESENT'), ($2,$3,$4,$6,'${yesterday}','ABSENT')`, [s1.id, s2.id, yr.id, cls.id, secA.id, secB.id]);
+
+const att = (studentId: string, secId: string, date: string, status = "PRESENT", extra = "") =>
+  `insert into attendance_records(student_id,academic_year_id,class_id,section_id,attendance_date,status${extra ? ",marked_by" : ""}) values ('${studentId}','${yr.id}','${cls.id}','${secId}','${date}','${status}'${extra ? `,'${extra}'` : ""})`;
+
+await as("parent1", async () => check("parent1 sees only own child's attendance", (await count(`select 1 from attendance_records`)) === 1));
+await as("parent2", async () => check("parent2 sees only own child's attendance", (await count(`select 1 from attendance_records where student_id='${s1.id}'`)) === 0));
+await as("student1", async () => check("student1 sees only own attendance", (await count(`select 1 from attendance_records`)) === 1));
+await as("student2", async () => check("student2 cannot see student1's attendance", (await count(`select 1 from attendance_records where student_id='${s1.id}'`)) === 0));
+await as("teacher2", async () => check("unassigned teacher sees no attendance", (await count(`select 1 from attendance_records`)) === 0));
+await as("organizer", async () => check("organizer sees all attendance", (await count(`select 1 from attendance_records`)) === 2));
+
+await as("teacher", async () => {
+  check("teacher sees only assigned section's attendance", (await count(`select 1 from attendance_records`)) === 1);
+  check("teacher can mark own section (today)", !(await tryErr(att(s1.id, secA.id, today, "LATE"))));
+  const mb = (await db.query<{ marked_by: string }>(`select marked_by from attendance_records where attendance_date='${today}'`)).rows[0];
+  check("marked_by is the session user", mb?.marked_by === uid.teacher);
+  check("forged marked_by is overwritten", !(await tryErr(att(s1.id, secA.id, twoDaysAgo, "PRESENT", uid.admin)))
+    && (await db.query<{ marked_by: string }>(`select marked_by from attendance_records where attendance_date='${twoDaysAgo}'`)).rows[0]?.marked_by === uid.teacher);
+  check("teacher cannot mark another section", !!(await tryErr(att(s2.id, secB.id, today))));
+  check("future date rejected", !!(await tryErr(att(s1.id, secA.id, tomorrow))));
+  check("duplicate day rejected", !!(await tryErr(att(s1.id, secA.id, today))));
+  check("student not enrolled in that section rejected", !!(await tryErr(att(s2.id, secA.id, twoDaysAgo))));
+  check("teacher can correct status", !(await tryErr(`update attendance_records set status='ABSENT', note='called home' where student_id='${s1.id}' and attendance_date='${today}'`)));
+  check("date is immutable", !!(await tryErr(`update attendance_records set attendance_date='${yesterday}' where attendance_date='${today}'`)));
+  check("student_id is immutable", !!(await tryErr(`update attendance_records set student_id='${s2.id}' where attendance_date='${today}'`)));
+  const upsert = (studentId: string, secId: string, date: string, status: string) =>
+    `insert into attendance_records(student_id,academic_year_id,class_id,section_id,attendance_date,status) values ('${studentId}','${yr.id}','${cls.id}','${secId}','${date}','${status}')
+     on conflict (student_id, attendance_date) do update set student_id=excluded.student_id, academic_year_id=excluded.academic_year_id,
+       class_id=excluded.class_id, section_id=excluded.section_id, attendance_date=excluded.attendance_date, status=excluded.status`;
+  check("upsert (how the app saves) updates an existing day", !(await tryErr(upsert(s1.id, secA.id, today, "PRESENT")))
+    && (await db.query<{ status: string }>(`select status from attendance_records where student_id='${s1.id}' and attendance_date='${today}'`)).rows[0]?.status === "PRESENT");
+  check("upsert inserts a new day", !(await tryErr(upsert(s1.id, secA.id, twoDaysAgo, "ABSENT"))));
+  check("upsert cannot smuggle a student into a section they are not enrolled in", !!(await tryErr(upsert(s2.id, secA.id, twoDaysAgo, "PRESENT"))));
+  check("upsert cannot move a record to a section the teacher does not teach", !!(await tryErr(upsert(s1.id, secB.id, today, "PRESENT"))));
+  check("teacher cannot delete attendance", (await db.query(`delete from attendance_records returning 1`)).rows.length === 0);
+});
+for (const u of ["student1", "parent1"]) {
+  await as(u, async () => {
+    check(`${u} cannot mark attendance`, !!(await tryErr(att(s1.id, secA.id, twoDaysAgo, "PRESENT"))));
+    check(`${u} update affects 0 rows`, (await db.query(`update attendance_records set status='PRESENT' returning 1`)).rows.length === 0);
+    check(`${u} delete affects 0 rows`, (await db.query(`delete from attendance_records returning 1`)).rows.length === 0);
+  });
+}
+await as("organizer", async () => {
+  check("organizer can delete attendance", (await db.query(`delete from attendance_records where attendance_date='${twoDaysAgo}' returning 1`)).rows.length === 1);
+});
+
+const hw = (teacherId: string | null, secId: string, subjectId: string, due: string, title = "Ch. 3 exercises") =>
+  `insert into homework(academic_year_id,class_id,section_id,subject_id,teacher_id,title,due_date) values ('${yr.id}','${cls.id}','${secId}','${subjectId}',${teacherId ? `'${teacherId}'` : "null"},'${title}','${due}')`;
+const sub2 = await one(`insert into subjects(code,name) values ('PHY','Physics') returning id`);
+
+await as("teacher", async () => {
+  check("teacher creates homework for assigned subject/section", !(await tryErr(hw(t1.id, secA.id, sub.id, tomorrow))));
+  check("teacher cannot create homework for an unassigned subject", !!(await tryErr(hw(t1.id, secA.id, sub2.id, tomorrow))));
+  check("teacher cannot create homework for an unassigned section", !!(await tryErr(hw(t1.id, secB.id, sub.id, tomorrow))));
+  check("teacher cannot post as another teacher", !!(await tryErr(hw(t2.id, secA.id, sub.id, tomorrow))));
+  check("due date before assigned date rejected", !!(await tryErr(hw(t1.id, secA.id, sub.id, twoDaysAgo))));
+});
+await as("student1", async () => check("student1 sees section homework", (await count(`select 1 from homework`)) === 1));
+await as("parent1", async () => check("parent1 sees child's homework", (await count(`select 1 from homework`)) === 1));
+await as("student2", async () => check("student2 (other section) sees no homework", (await count(`select 1 from homework`)) === 0));
+await as("parent2", async () => check("parent2 (other section) sees no homework", (await count(`select 1 from homework`)) === 0));
+await as("teacher2", async () => {
+  check("unassigned teacher sees no homework", (await count(`select 1 from homework`)) === 0);
+  check("unassigned teacher cannot delete it", (await db.query(`delete from homework returning 1`)).rows.length === 0);
+});
+await as("student1", async () => {
+  check("student cannot create homework", !!(await tryErr(hw(null, secA.id, sub.id, tomorrow))));
+  check("student cannot edit homework", (await db.query(`update homework set title='x' returning 1`)).rows.length === 0);
+});
+await as("organizer", async () => {
+  check("organizer sees homework", (await count(`select 1 from homework`)) === 1);
+  check("organizer can post homework without a teacher", !(await tryErr(hw(null, secA.id, sub.id, tomorrow, "Staff notice"))));
+});
+await as("teacher", async () => {
+  check("teacher deletes own homework", (await db.query(`delete from homework where teacher_id='${t1.id}' returning 1`)).rows.length === 1);
+});
+
 check("cannot link student record to TEACHER profile", !!(await tryErr(`insert into students(profile_id,admission_number,full_name) values ('${uid.teacher2}','Z-1','Z')`)));
 check("cannot link guardian record to STUDENT profile", !!(await tryErr(`insert into guardians(profile_id,full_name) values ('${uid.student1}','Z')`)));
 check("unlinked student record allowed", !(await tryErr(`insert into students(admission_number,full_name) values ('U-1','Unlinked')`)));
@@ -174,6 +264,6 @@ describe("migrations + RLS (embedded Postgres)", () => {
   it("applies idempotently and enforces isolation", async () => {
     const { pass, failures } = await run();
     expect(failures).toEqual([]);
-    expect(pass).toBeGreaterThan(50);
+    expect(pass).toBeGreaterThan(90);
   }, 120_000);
 });

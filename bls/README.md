@@ -2,7 +2,7 @@
 
 A bilingual (English/বাংলা) school management platform — public website, admin/organizer/teacher/
 student/guardian portals, attendance, homework, exams, results, fees, and more, built phase by
-phase. This repository is currently on **Phase 2: Core school data model** (Phase 1 foundation + students, guardians, teachers, classes, enrollment, user management) — see `docs/development-plan.md` for
+phase. This repository is currently on **Phase 3: Attendance + Homework** (on top of Phase 1 foundation and Phase 2 school data model: students, guardians, teachers, classes, enrollment, user management) — see `docs/development-plan.md` for
 what's built and what's next.
 
 ## Stack
@@ -22,7 +22,7 @@ Apply the database migrations and seed demo accounts before logging in — see
 
 ```bash
 # In the Supabase SQL editor, in order:
-#   supabase/migrations/0001_init.sql … 0005_relationships.sql
+#   supabase/migrations/0001_init.sql … 0007_homework.sql
 
 SEED_ENV=development npm run seed   # 8 demo accounts (every role, plus a second student/parent/teacher for isolation tests)
 npm run test:rls                    # RLS smoke tests
@@ -36,7 +36,7 @@ npm run test:rls                    # RLS smoke tests
 | `npm run build` | Production build |
 | `npm run lint` | ESLint |
 | `npm run typecheck` | `tsc --noEmit` |
-| `npm test` | Applies migrations to an embedded Postgres and asserts RLS isolation (no Supabase needed) |
+| `npm test` | Applies migrations to an embedded Postgres and asserts RLS isolation, plus unit tests (no Supabase needed) |
 | `npm run seed` | Create demo accounts (requires `SEED_ENV=development`) |
 | `npm run test:rls` | RLS smoke tests against a live Supabase project |
 

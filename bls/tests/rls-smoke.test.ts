@@ -221,3 +221,66 @@ describe.runIf(hasEnv)("school data RLS (Phase 2)", () => {
     expect((data ?? []).length).toBeGreaterThanOrEqual(2);
   });
 });
+
+describe.runIf(hasEnv)("attendance & homework RLS (Phase 3)", () => {
+  it("parents and students see only their own attendance", async () => {
+    for (const [email, count] of [[DEMO.parent, 5], [DEMO.student, 5], [DEMO.parent2, 5], [DEMO.student2, 5]] as const) {
+      const client = await signedInClient(email);
+      const { data, error } = await client.from("attendance_records").select("student_id");
+      expect(error).toBeNull();
+      expect(data).toHaveLength(count);
+      expect(new Set(data?.map((r) => r.student_id)).size).toBe(1);
+    }
+  });
+
+  it("an unassigned teacher sees no attendance or homework", async () => {
+    const teacher2 = await signedInClient(DEMO.teacher2);
+    expect((await teacher2.from("attendance_records").select("id")).data).toHaveLength(0);
+    expect((await teacher2.from("homework").select("id")).data).toHaveLength(0);
+  });
+
+  it("homework is visible only to the right section", async () => {
+    const a = await signedInClient(DEMO.parent);
+    const b = await signedInClient(DEMO.parent2);
+    expect(((await a.from("homework").select("id")).data ?? []).length).toBeGreaterThanOrEqual(2);
+    expect((await b.from("homework").select("id")).data).toHaveLength(0);
+  });
+
+  it("students and parents cannot mark attendance or post homework", async () => {
+    for (const email of [DEMO.student, DEMO.parent]) {
+      const client = await signedInClient(email);
+      const { data: students } = await client.from("students").select("id").limit(1);
+      const { data: enr } = await client.from("student_enrollments").select("*").limit(1);
+      const e = enr?.[0];
+      if (!e || !students?.[0]) continue;
+      const mark = await client.from("attendance_records").insert({
+        student_id: e.student_id, academic_year_id: e.academic_year_id, class_id: e.class_id,
+        section_id: e.section_id, attendance_date: "2020-01-01", status: "PRESENT",
+      });
+      expect(mark.error).not.toBeNull();
+    }
+  });
+
+  it("a teacher cannot mark a section they do not teach", async () => {
+    const teacher = await signedInClient(DEMO.teacher);
+    const organizer = await signedInClient(DEMO.organizer);
+
+    const { data: all } = await organizer.from("student_enrollments").select("*").eq("status", "ACTIVE");
+    const { data: mine } = await teacher.from("student_enrollments").select("section_id");
+    const taught = new Set(mine?.map((r) => r.section_id));
+    const foreign = all?.find((e) => !taught.has(e.section_id));
+
+    // The seed puts student2 in section B, which the demo teacher does not teach.
+    expect(foreign, "seed must contain an enrollment in a section the teacher does not teach").toBeDefined();
+
+    const res = await teacher.from("attendance_records").insert({
+      student_id: foreign!.student_id,
+      academic_year_id: foreign!.academic_year_id,
+      class_id: foreign!.class_id,
+      section_id: foreign!.section_id,
+      attendance_date: "2020-01-01",
+      status: "PRESENT",
+    });
+    expect(res.error).not.toBeNull();
+  });
+});

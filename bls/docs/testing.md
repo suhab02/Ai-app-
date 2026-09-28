@@ -11,12 +11,12 @@ npm run build       # next build (catches most SSR/RSC mistakes too)
 ## Migration + RLS tests (no Supabase needed)
 
 ```bash
-npm test            # embedded Postgres: applies migrations twice, asserts isolation
+npm test            # embedded Postgres (migrations twice + isolation) and attendance-summary unit tests
 ```
 
 ## Against a real Supabase project
 
-1. Create a project, then apply the migrations (`0001`…`0005`) in order — either paste each file into the SQL
+1. Create a project, then apply the migrations (`0001`…`0007`) in order — either paste each file into the SQL
    editor, or `supabase db push` if you have the CLI linked. **Order matters**: `0001_init.sql`
    before `0002_rls.sql` (see `docs/rls.md`).
 2. In the Supabase dashboard, enable the Google provider under Authentication → Providers, and add
@@ -35,7 +35,9 @@ npm test            # embedded Postgres: applies migrations twice, asserts isola
    | PARENT (2nd) | `parent2@brightlearning.test` | `Passw0rd!23` |
    | TEACHER (2nd, unassigned) | `teacher2@brightlearning.test` | `Passw0rd!23` |
 
-   The seed also creates 2025-2026 / Class 5 (sections A, B) / 4 subjects; Tanvir is in 5-A (parent Shirin), Rafi in 5-B
+   The seed also creates 5 days of attendance for both students and two homework items for 5-A (`schoolDate()` = Asia/Dhaka).
+
+   It also creates 2025-2026 / Class 5 (sections A, B) / 4 subjects; Tanvir is in 5-A (parent Shirin), Rafi in 5-B
    (parent Kamal), teacher Nusrat teaches 5-A only. Re-running the seed is safe (upserts).
 
    These are seed-only, non-production credentials by design — see the `SEED_ENV` guard in
@@ -50,6 +52,9 @@ npm test            # embedded Postgres: applies migrations twice, asserts isola
    - Admin/Organizer: `/dashboard/admin/users` activates a PENDING signup; an Organizer's role dropdown never offers
      Super Admin/Organizer; academic/people/enrollment pages create and link records.
    - Student sees only their class; parent sees only their child; teacher sees only 5-A and its students.
+   - Teacher (`teacher@`): Attendance → pick 5-A → mark → Save; 5-B is not offered. Homework → only 5-A Mathematics / English can be posted.
+   - Student/parent: Attendance shows summary cards, a month calendar and history; Homework shows 5-A items (student2/parent2 see none).
+   - Try editing the URL: `?section=<5-B id>` as the teacher shows no roster; students cannot load a roster.
    - The language switcher toggles every visible string between English and Bangla, immediately.
 
 ## What "Phase 1 passes" means

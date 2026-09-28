@@ -59,6 +59,21 @@ Every Phase 2 table has RLS enabled. Reads are relationship-scoped; writes are `
 `teacher_assignments` reference each other — the helpers bypass RLS for the lookup, so there is no policy
 recursion and each rule reads as one line.
 
+## Phase 3 policies
+
+`attendance_records`: SELECT = staff / `teaches_class_section` / `owns_student` / `is_guardian_of_student`; INSERT and UPDATE =
+staff / `teaches_class_section`; DELETE = staff. `homework`: SELECT = staff / author / `teaches_class_section` /
+`student_in_class_section`; INSERT/UPDATE/DELETE = staff, or `owns_teacher(teacher_id)` **and** `teaches_subject(...)`.
+All reuse the Phase 2 SECURITY DEFINER helpers (plus the new `teaches_subject`).
+
+**Why triggers as well as policies:** RLS can say *who* may write a row but not that the row is *coherent*. The
+`validate_attendance` trigger rejects a student who isn't enrolled in the section, future dates, identity-column edits and a
+forged `marked_by`; `validate_class_section_year` (Phase 2) guards homework's year/class/section.
+
+**Upserts:** the app saves a roster with `upsert(..., { onConflict: "student_id,attendance_date" })`, i.e. `INSERT ... ON
+CONFLICT DO UPDATE`. That path runs the INSERT trigger, then the INSERT policy, then the UPDATE trigger and policy, so it has
+its own tests in `tests/migrations.test.ts` (new day, existing day, wrong-section student, moving a row to a foreign section).
+
 ## `current_profile_role()` and recursion
 
 Any policy on `profiles` that needs to know the caller's role can't just `SELECT role FROM profiles

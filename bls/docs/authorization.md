@@ -54,6 +54,22 @@ All writes to all Phase 2 tables are SUPER_ADMIN/ORGANIZER only. The admin pages
 `requireStaff()` and every Server Action in `src/lib/admin/actions.ts` calls it again before validating input with Zod;
 RLS is the third, independent check. Nav visibility is UX only.
 
+## Phase 3 access matrix (migrations 0006–0007)
+
+| Data | SUPER_ADMIN / ORGANIZER | TEACHER | STUDENT | PARENT | anon |
+| --- | --- | --- | --- | --- | --- |
+| attendance — read | all | sections they are assigned to | own | linked children | none |
+| attendance — mark / correct | yes | sections they are assigned to (any subject) | no | no | no |
+| attendance — delete | yes | no | no | no | no |
+| homework — read | all | their sections | their section | their child's section | none |
+| homework — post / edit / delete | yes (teacher optional) | only for a (section, subject) they are assigned, and only their own rows | no | no | no |
+
+Attendance percentage = (present + late) ÷ (present + late + absent); excused and leave days are shown but do not count
+against the student (`src/lib/attendance/summary.ts`, unit-tested).
+
+Known limitation: attendance records keep the section they were marked in, so if a student is moved mid-year the *old*
+section's teacher can still read the records made while the student was theirs. That is deliberate (it is their history).
+
 ## Original scope notes (Phase 2+ targets)
 
 - **ORGANIZER**: students, guardians, teachers, classes, sections, subjects, attendance, homework,
@@ -65,7 +81,7 @@ RLS is the third, independent check. Nav visibility is UX only.
 - **PARENT**: only their linked children (many-to-many via a future `student_guardians` table);
   never another guardian's child.
 
-Phase 2 implements the people/class relationships above; attendance, homework, results and fees (Phase 3+) will reuse the same helper functions.
+Phase 2 implements the people/class relationships above; Phase 3 (attendance, homework) reuses the same helper functions, and results and fees will too.
 
 ## Never trust the client
 

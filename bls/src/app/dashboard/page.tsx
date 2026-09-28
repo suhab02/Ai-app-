@@ -1,19 +1,25 @@
 import { getCurrentProfile } from "@/lib/auth/dal";
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { getDictionary, type Dictionary } from "@/lib/i18n/dictionary";
 import { getLocale } from "@/lib/i18n/get-locale";
 import type { UserRole } from "@/lib/supabase/types";
 import { createClient } from "@/lib/supabase/server";
-
-type Db = Awaited<ReturnType<typeof createClient>>;
+import { getSectionLabeler } from "@/lib/school/labels";
 
 type DomainKey = keyof Dictionary["domain"];
 
 // What each role will eventually manage or see (Phase 2+). Phase 1 only
 // proves the role reaches the right shell with the right scope — the actual
 // data views land module by module.
+// Modules that exist now; the rest still show "coming soon".
+const LIVE_MODULES: Partial<Record<DomainKey, string>> = {
+  attendance: "/dashboard/attendance",
+  homework: "/dashboard/homework",
+};
+
 const ROLE_MODULES: Record<UserRole, DomainKey[]> = {
   SUPER_ADMIN: [
     "students",
@@ -49,28 +55,12 @@ const ROLE_MODULES: Record<UserRole, DomainKey[]> = {
 };
 
 
-async function sectionLabels(db: Db) {
-  const [years, classes, sections] = await Promise.all([
-    db.from("academic_years").select("id, name"),
-    db.from("classes").select("id, name, academic_year_id"),
-    db.from("sections").select("id, name, class_id"),
-  ]);
-  const yearName = new Map(years.data?.map((y) => [y.id, y.name]));
-  const classById = new Map(classes.data?.map((c) => [c.id, c]));
-  const sectionById = new Map(sections.data?.map((s) => [s.id, s]));
-  return (sectionId: string) => {
-    const s = sectionById.get(sectionId);
-    const c = s && classById.get(s.class_id);
-    return s && c ? `${c.name} – ${s.name} (${yearName.get(c.academic_year_id)})` : "";
-  };
-}
-
 // Every query below runs as the signed-in user, so RLS decides what comes back:
 // a student gets their own enrollment, a guardian their linked children, a
 // teacher their assigned class-sections and those students only.
 async function StudentPanel({ dictionary }: { dictionary: Dictionary }) {
   const db = await createClient();
-  const label = await sectionLabels(db);
+  const label = await getSectionLabeler(db);
   const { data } = await db
     .from("student_enrollments")
     .select("*")
@@ -96,7 +86,7 @@ async function StudentPanel({ dictionary }: { dictionary: Dictionary }) {
 
 async function ParentPanel({ dictionary }: { dictionary: Dictionary }) {
   const db = await createClient();
-  const label = await sectionLabels(db);
+  const label = await getSectionLabeler(db);
   const [students, enrollments] = await Promise.all([
     db.from("students").select("id, full_name, admission_number").order("full_name"),
     db.from("student_enrollments").select("student_id, section_id, roll_number").eq("status", "ACTIVE"),
@@ -128,7 +118,7 @@ async function ParentPanel({ dictionary }: { dictionary: Dictionary }) {
 
 async function TeacherPanel({ dictionary }: { dictionary: Dictionary }) {
   const db = await createClient();
-  const label = await sectionLabels(db);
+  const label = await getSectionLabeler(db);
   const [assignments, subjects, students, enrollments] = await Promise.all([
     db.from("teacher_assignments").select("*"),
     db.from("subjects").select("id, name"),
@@ -191,14 +181,23 @@ export default async function DashboardPage() {
       {profile.role === "TEACHER" && <TeacherPanel dictionary={dictionary} />}
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {modules.map((key) => (
-          <Card key={key}>
-            <CardHeader>
-              <CardTitle>{dictionary.domain[key]}</CardTitle>
-            </CardHeader>
-            <p className="text-sm text-slate-500">{dictionary.dashboard.comingSoon}</p>
-          </Card>
-        ))}
+        {modules.map((key) => {
+          const href = LIVE_MODULES[key];
+          return (
+            <Card key={key}>
+              <CardHeader>
+                <CardTitle>{dictionary.domain[key]}</CardTitle>
+              </CardHeader>
+              {href ? (
+                <Link href={href} className="text-sm font-medium text-brand-green hover:underline">
+                  {dictionary.dashboard.open} →
+                </Link>
+              ) : (
+                <p className="text-sm text-slate-500">{dictionary.dashboard.comingSoon}</p>
+              )}
+            </Card>
+          );
+        })}
       </div>
     </div>
   );
