@@ -33,7 +33,9 @@ file after a partial failure finishes the job instead of erroring on "already ex
 
 - `0012_admissions_cms.sql` — `admission_applications` (anonymous insert-only), `site_content` (public read, staff write) with starter content.
 
-**Apply order matters**: run `0001` → `0012` in order; each depends on the previous ones.
+- `0013_function_privileges.sql` — revokes EXECUTE on every public function from `anon`/PUBLIC (except `album_is_published`), keeps it for signed-in users, closes future functions by default.
+
+**Apply order matters**: run `0001` → `0013` in order; each depends on the previous ones.
 
 ## Schema (Phase 1)
 

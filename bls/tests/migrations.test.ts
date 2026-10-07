@@ -522,11 +522,15 @@ await as("student1", async () => check("student cannot delete documents", (await
 await as("organizer", async () => check("staff can delete documents", (await db.query(`delete from storage.objects where bucket_id='student-documents' returning 1`)).rows.length === 1));
 
 // ---- Phase 8: admissions + site content ------------------------------------
-const dobYearsAgo = (n: number) => `(public.school_today() - interval '${n} years')::date`;
+// Literal dates, exactly as the real form posts them: an anonymous caller may not call school_today() itself.
+const dobOf = async (expr: string) => `'${(await db.query<{ d: string }>(`select to_char(${expr}, 'YYYY-MM-DD') as d`)).rows[0].d}'`;
+const dob8 = await dobOf("(public.school_today() - interval '8 years')");
+const dob40 = await dobOf("(public.school_today() - interval '40 years')");
+const dobTomorrow = await dobOf("(public.school_today() + 1)");
 const applySql = (over: Record<string, string> = {}, returning = "") => {
   const f: Record<string, string> = {
     applicant_name: "'Little Applicant'",
-    date_of_birth: dobYearsAgo(8),
+    date_of_birth: dob8,
     desired_class: "'Class 3'",
     guardian_name: "'Proud Guardian'",
     guardian_phone: "'+880 1700-000000'",
@@ -546,8 +550,8 @@ await as("anon", async () => {
   check("bad email rejected", !!(await tryErr(applySql({ guardian_email: "'not-an-email'" }))));
   check("a good email is accepted", !(await tryErr(applySql({ guardian_email: "'parent@example.com'" }))));
   check("oversized message rejected", !!(await tryErr(applySql({ message: "repeat('x', 2001)" }))));
-  check("future birth date rejected", !!(await tryErr(applySql({ date_of_birth: "(public.school_today() + 1)" }))));
-  check("implausible birth date rejected", !!(await tryErr(applySql({ date_of_birth: dobYearsAgo(40) }))));
+  check("future birth date rejected", !!(await tryErr(applySql({ date_of_birth: dobTomorrow }))));
+  check("implausible birth date rejected", !!(await tryErr(applySql({ date_of_birth: dob40 }))));
   check("blank name rejected", !!(await tryErr(applySql({ applicant_name: "' '" }))));
 });
 await as("student1", async () => {
@@ -601,6 +605,35 @@ await as("organizer", async () => {
   check("organizer cannot grant SUPER_ADMIN", !!(await tryErr(`update profiles set role='SUPER_ADMIN' where id='${uid.student2}'`)));
   check("organizer can suspend", !(await tryErr(`update profiles set status='SUSPENDED' where id='${uid.student2}'`)));
 });
+// ---- Project-wide invariants (inspect the catalog, so a future phase can't quietly regress them) ----
+const catalog = async (sql: string) => (await db.query<{ n: string }>(sql)).rows.map((r) => r.n).sort();
+
+check("EVERY public table has row level security enabled",
+  JSON.stringify(await catalog(`select c.relname as n from pg_class c join pg_namespace ns on ns.oid=c.relnamespace where ns.nspname='public' and c.relkind='r' and not c.relrowsecurity`)) === "[]",
+  JSON.stringify(await catalog(`select c.relname as n from pg_class c join pg_namespace ns on ns.oid=c.relnamespace where ns.nspname='public' and c.relkind='r' and not c.relrowsecurity`)));
+
+const anonTables = await catalog(`select table_name || ':' || privilege_type as n from information_schema.role_table_grants where grantee='anon' and table_schema='public'`);
+check("anon holds table privileges ONLY for the intended public reads",
+  JSON.stringify(anonTables) === JSON.stringify(["events:SELECT", "gallery_albums:SELECT", "gallery_photos:SELECT", "notices:SELECT", "site_content:SELECT"]), JSON.stringify(anonTables));
+
+const anonInsertCols = await catalog(`select table_name || '.' || column_name as n from information_schema.column_privileges where grantee='anon' and table_schema='public' and privilege_type='INSERT'`);
+check("anon may INSERT only the admission form's own columns", anonInsertCols.length === 11 && anonInsertCols.every((c) => c.startsWith("admission_applications."))
+  && !anonInsertCols.some((c) => /status|review|reviewed/.test(c)), JSON.stringify(anonInsertCols));
+
+check("anon can UPDATE and DELETE nothing in public", (await count(`select 1 from information_schema.role_table_grants where grantee='anon' and table_schema='public' and privilege_type in ('UPDATE','DELETE','INSERT','TRUNCATE')`)) === 0);
+
+const anonFns = await catalog(`select p.proname as n from pg_proc p join pg_namespace ns on ns.oid=p.pronamespace where ns.nspname='public' and has_function_privilege('anon', p.oid, 'EXECUTE')`);
+check("the ONLY public function anon may call is album_is_published", JSON.stringify(anonFns) === JSON.stringify(["album_is_published"]), JSON.stringify(anonFns));
+
+for (const fn of ["next_receipt_no()", "invoice_paid_total(uuid, uuid)", "generate_display_id(public.user_role)"]) {
+  check(`signed-in users cannot call ${fn}`, (await db.query<{ ok: boolean }>(`select has_function_privilege('authenticated', 'public.${fn}', 'EXECUTE') as ok`)).rows[0].ok === false);
+}
+
+for (const table of ["payments", "invoices", "admission_applications", "site_content"]) {
+  check(`nobody (signed-in included) may DELETE from ${table}`, (await db.query<{ ok: boolean }>(`select has_table_privilege('authenticated', 'public.${table}', 'DELETE') as ok`)).rows[0].ok === false);
+}
+check("signed-in users cannot DELETE profiles", (await db.query<{ ok: boolean }>(`select has_table_privilege('authenticated', 'public.profiles', 'DELETE') as ok`)).rows[0].ok === false);
+
 return { pass, failures };
 }
 
@@ -608,6 +641,6 @@ describe("migrations + RLS (embedded Postgres)", () => {
   it("applies idempotently and enforces isolation", async () => {
     const { pass, failures } = await run();
     expect(failures).toEqual([]);
-    expect(pass).toBeGreaterThan(325);
+    expect(pass).toBeGreaterThan(335);
   }, 120_000);
 });

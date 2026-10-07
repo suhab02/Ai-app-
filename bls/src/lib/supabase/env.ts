@@ -15,8 +15,3 @@ export function getSupabaseUrl(): string {
 export function getSupabaseAnonKey(): string {
   return requireEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY");
 }
-
-/** Server-only. Never import this file from a Client Component. */
-export function getSupabaseServiceRoleKey(): string {
-  return requireEnv("SUPABASE_SERVICE_ROLE_KEY");
-}

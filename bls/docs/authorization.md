@@ -117,7 +117,7 @@ A section-targeted `STUDENTS` notice reaches that section's students only, not t
 An applicant can only write the form's own columns. `status`, `review_notes`, `reviewed_by` and `reviewed_at` cannot be set by them: they are
 not in the column-level `GRANT INSERT`, *and* the INSERT policy re-checks them. Either layer alone blocks it; both are tested.
 
-## Original scope notes (Phase 2+ targets)
+## Original role brief (all of it is now implemented)
 
 - **ORGANIZER**: students, guardians, teachers, classes, sections, subjects, attendance, homework,
   results, timetable, fees, payments, notices, events, gallery, website content. Cannot assign
@@ -125,10 +125,10 @@ not in the column-level `GRANT INSERT`, *and* the INSERT policy re-checks them. 
 - **TEACHER**: only their assigned classes/sections/subjects/students. Cannot see unrelated
   students, manage users, or reach admin security.
 - **STUDENT**: only their own profile/attendance/homework/results/timetable/notices/events/fees.
-- **PARENT**: only their linked children (many-to-many via a future `student_guardians` table);
+- **PARENT**: only their linked children (many-to-many via `student_guardians`);
   never another guardian's child.
 
-Phase 2 implements the people/class relationships above; Phase 3 (attendance, homework) reuses the same helper functions, and results and fees will too.
+Phases 2–8 implement everything above, all reusing the same SECURITY DEFINER helpers; the per-module matrices above are the authoritative, tested version.
 
 ## Never trust the client
 

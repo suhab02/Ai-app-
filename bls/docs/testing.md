@@ -70,10 +70,12 @@ npm test            # embedded Postgres (migrations twice + isolation) and atten
      `/dashboard/admin/website` edits the home/about/contact/admissions text in English and Bangla.
    - The language switcher toggles every visible string between English and Bangla, immediately.
 
-## What "Phase 1 passes" means
+## What "passes" means
 
-- `npm run build` succeeds.
-- All demo accounts can log in and land on a dashboard scoped to their role.
-- `npm run test:rls` passes against the live project.
-- No table, policy, or trigger requires a manual dashboard click that isn't documented in
-  `docs/deployment.md`.
+Locally, with nothing external: `npm run lint`, `npm run typecheck`, `npm run build`, and `npm test` (embedded Postgres + unit tests) are all green.
+`npm test` currently asserts ~340 database facts plus unit tests for attendance %, grading and report cards, the timetable grid, money/invoice maths and
+upload validation. Each phase's key rules were also checked by deliberately weakening a policy and watching the tests fail.
+
+Against your Supabase project: all demo accounts can log in and land on a dashboard scoped to their role; `npm run test:rls` passes; and the manual
+walkthrough above behaves as described. **None of the live-project steps have been run by the author** — there was no Supabase project in the build
+environment — so treat the first run as the real acceptance test.

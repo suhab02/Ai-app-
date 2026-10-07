@@ -15,7 +15,7 @@ manual demo-account check) before the next one starts, and always waits for expl
 - [x] One role-aware dashboard shell (SUPER_ADMIN, ORGANIZER, TEACHER, STUDENT, PARENT)
 - [x] Base UI kit: Button, Input, Card, Badge, LanguageSwitcher, ProfileMenu, StatusBanner,
       Sidebar/BottomNav
-- [x] Dev seed script (`npm run seed`, `SEED_ENV=development`) — 5 demo accounts
+- [x] Dev seed script (`npm run seed`, `SEED_ENV=development`) — 8 demo accounts (5 in Phase 1, three more added later)
 - [x] RLS smoke tests (`npm run test:rls`) — real network calls, no service-role key
 - [x] Docs (this set), `.env.example`
 
@@ -80,11 +80,19 @@ events, gallery, admissions, public website content, mobile app.
 - [x] Small plain-text CMS for the public pages, editable in both languages
 - Not in Phase 8: CAPTCHA / edge rate limiting (recommended before launch), accepted-application → student conversion, applicant status lookup, rich-text editing, SEO sitemap
 
-## After Phase 8
+## Final hardening (migration 0013 + catalog invariants)
 
+- [x] No public function is callable by anonymous visitors except `album_is_published`; future functions start closed
+- [x] Catalog tests: every public table has RLS; anon table/column privileges are an exact allowlist; ledger/records are never deletable
 
-Exams/Results/Report cards → Timetable → Fees/Payments/Receipts →
-Notices/Events/Gallery → Admissions/public website/CMS → React Native/Expo mobile app.
+## What is deliberately NOT built (the honest backlog)
+
+- **Mobile app** (React Native / Expo) — separate project; the database already enforces every rule it would need.
+- **Online payment gateways**, **email/SMS/push delivery**, **server-rendered PDFs** (print-to-PDF is used), **CAPTCHA/rate limiting** for the public form.
+- UI to **edit/delete** most records after creation (create + status changes exist), **bulk import**, **pagination** on long lists, photo upload for people.
+- **Student documents** upload/download UI (bucket and policies exist and are tested), **homework attachments and submissions**.
+- Academic extras: per-period attendance, ranking/positions, weighted terms, fee discounts/late fees, substitute teachers, applicant→student conversion.
+- A **second review of the SQL by a person** who did not write it, and a run of the whole suite against a real Supabase project, are the recommended acceptance steps.
 
 ## Working rules carried into every phase
 

@@ -118,6 +118,18 @@ applicants out.
 
 Website content is plain text, rendered as text (React escapes it) — never HTML or Markdown — so an editor cannot inject script into the public site.
 
+## Final hardening (0013) and the catalog invariants
+
+Every `SECURITY DEFINER` helper is, by Postgres default, executable by everyone and therefore reachable as `/rest/v1/rpc/<name>`. Migration 0013
+revokes EXECUTE on **all** public functions from `anon`/PUBLIC, re-grants it to signed-in users (policies and column defaults call these as the caller),
+keeps `album_is_published` for anon (the public gallery policy needs it), keeps the three internal functions closed to everyone, and changes the default
+privileges so a function added in a later migration starts closed.
+
+Two things stop this from rotting. `tests/migrations.test.ts` ends with assertions that inspect the **catalog** rather than behaviour:
+every public table has RLS on; `anon` holds exactly five table `SELECT`s and one column-limited `INSERT`; the only function `anon` can execute is
+`album_is_published`; nobody can `DELETE` from the ledger, applications, site content or profiles. And those tests were verified to fail when the revoke
+is removed (35 functions became anonymously callable).
+
 ## `current_profile_role()` and recursion
 
 Any policy on `profiles` that needs to know the caller's role can't just `SELECT role FROM profiles
@@ -135,12 +147,11 @@ student A vs B, assigned vs unassigned teacher, write lockouts, integrity constr
 **Against a real project:**
 
 ```bash
-SEED_ENV=development npm run seed   # creates 5 demo accounts, one per role
+SEED_ENV=development npm run seed   # creates 8 demo accounts and sample data for every module
 npm run test:rls                    # tests/rls-smoke.test.ts — real anon-key network calls
 ```
 
-The smoke tests cover the isolation guarantees the project brief calls mandatory, scoped to what
-Phase 1 has:
+The smoke tests cover the isolation guarantees the project brief calls mandatory. For `profiles`:
 
 - Logged-out requests get nothing from `profiles`.
 - A STUDENT can read their own row, not a TEACHER's.
