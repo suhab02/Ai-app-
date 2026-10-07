@@ -34,6 +34,10 @@ export type GuardianRelationship =
 
 export type Gender = "MALE" | "FEMALE" | "OTHER";
 
+export type PaymentMethod = "CASH" | "BANK" | "BKASH" | "NAGAD" | "ROCKET" | "CARD" | "ONLINE" | "OTHER";
+
+export type PaymentStatus = "PENDING" | "PAID" | "FAILED" | "REFUNDED" | "PARTIAL";
+
 export type AssessmentKind =
   | "CLASS_TEST"
   | "QUIZ"
@@ -286,6 +290,39 @@ export type TimetableEntryRow = {
   updated_at: string;
 };
 
+export type FeeTypeRow = { id: string; code: string; name: string; name_bn: string | null; created_at: string };
+
+export type InvoiceRow = {
+  id: string;
+  student_id: string;
+  academic_year_id: string;
+  fee_type_id: string;
+  description: string | null;
+  amount_due: number;
+  due_date: string;
+  voided_at: string | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type PaymentRow = {
+  id: string;
+  invoice_id: string;
+  student_id: string;
+  guardian_id: string | null;
+  amount: number;
+  paid_at: string;
+  method: PaymentMethod;
+  reference: string | null;
+  status: PaymentStatus;
+  collected_by: string | null;
+  notes: string | null;
+  receipt_no: string;
+  created_at: string;
+  updated_at: string;
+};
+
 type Table<Row, Required extends keyof Row = never> = {
   Row: Row;
   Insert: Partial<Row> & Pick<Row, Required>;
@@ -329,6 +366,9 @@ export interface Database {
         TimetableEntryRow,
         "academic_year_id" | "class_id" | "section_id" | "weekday" | "period_id" | "subject_id"
       >;
+      fee_types: Table<FeeTypeRow, "code" | "name">;
+      invoices: Table<InvoiceRow, "student_id" | "academic_year_id" | "fee_type_id" | "amount_due" | "due_date">;
+      payments: Table<PaymentRow, "invoice_id" | "amount" | "method">;
       homework: Table<
         HomeworkRow,
         "academic_year_id" | "class_id" | "section_id" | "subject_id" | "title" | "due_date"

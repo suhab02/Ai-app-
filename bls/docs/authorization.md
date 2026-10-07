@@ -88,6 +88,13 @@ Unpublishing is staff-only; after publication a teacher cannot change marks (the
 | periods | read + write | read | read | read | none |
 | timetable entries | read + write | lessons they teach, and their sections' | their section's | their child's section's | none |
 
+## Phase 6 access matrix (migration 0010)
+
+| Data | SUPER_ADMIN / ORGANIZER | TEACHER | STUDENT | PARENT | anon |
+| --- | --- | --- | --- | --- | --- |
+| fee types | read + write | read | read | read | none |
+| invoices, payments, receipts | read + create/void/refund (never delete) | **none** | own | linked children's | none |
+
 ## Original scope notes (Phase 2+ targets)
 
 - **ORGANIZER**: students, guardians, teachers, classes, sections, subjects, attendance, homework,

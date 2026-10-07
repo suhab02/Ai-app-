@@ -10,6 +10,7 @@ interface NavItem {
 }
 
 const STAFF: UserRole[] = ["SUPER_ADMIN", "ORGANIZER"];
+const FEE_ROLES: UserRole[] = ["SUPER_ADMIN", "ORGANIZER", "STUDENT", "PARENT"];
 
 // Visibility here is UX only. Every /dashboard/admin page re-checks the
 // caller with requireStaff() on the server, and RLS re-checks every query.
@@ -19,6 +20,7 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/dashboard/homework", labelKey: "domain.homework" },
   { href: "/dashboard/results", labelKey: "domain.results" },
   { href: "/dashboard/timetable", labelKey: "domain.timetable" },
+  { href: "/dashboard/fees", labelKey: "domain.fees", roles: FEE_ROLES },
   { href: "/dashboard/admin/users", labelKey: "nav.users", roles: STAFF },
   { href: "/dashboard/admin/academic", labelKey: "nav.academic", roles: STAFF },
   { href: "/dashboard/admin/people", labelKey: "nav.people", roles: STAFF },

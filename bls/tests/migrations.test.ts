@@ -340,6 +340,91 @@ for (const u of ["teacher", "student1", "parent1"]) {
   });
 }
 
+// ---- Phase 6: fees, payments, receipts ----------------------------------
+const ft = await one(`insert into fee_types(code,name) values ('TUITION','Tuition') returning id`);
+const invoiceSql = (studentId: string, amount: number, desc = "Tuition") =>
+  `insert into invoices(student_id,academic_year_id,fee_type_id,amount_due,due_date,description) values ('${studentId}','${yr.id}','${ft.id}',${amount},'${tomorrow}','${desc}') returning id`;
+const pay = (invId: string, amount: number, status = "PAID", extra = "") =>
+  `insert into payments(invoice_id,amount,method,status${extra ? ",guardian_id,receipt_no" : ""}) values ('${invId}',${amount},'CASH','${status}'${extra ? extra : ""}) returning receipt_no`;
+
+let inv1 = "";
+let inv2 = "";
+let payId2 = "";
+await as("organizer", async () => {
+  inv1 = (await db.query<{ id: string }>(invoiceSql(s1.id, 2000, "Jan tuition"))).rows[0].id;
+  inv2 = (await db.query<{ id: string }>(invoiceSql(s2.id, 1500))).rows[0].id;
+  check("created_by is the session user", (await db.query<{ created_by: string }>(`select created_by from invoices where id='${inv1}'`)).rows[0].created_by === uid.organizer);
+  check("zero/negative invoice rejected", !!(await tryErr(invoiceSql(s1.id, 0))) && !!(await tryErr(invoiceSql(s1.id, -5))));
+
+  const first = (await db.query<{ receipt_no: string }>(pay(inv1, 1200, "PAID", `,null,'FORGED-1'`))).rows[0].receipt_no;
+  check("receipt number is server-generated (forged value ignored)", /^BLS-RCPT-\d{4}-000001$/.test(first), first);
+  const second = (await db.query<{ receipt_no: string }>(pay(inv1, 800))).rows[0].receipt_no;
+  check("receipt numbers increment", /-000002$/.test(second), second);
+  check("student_id is derived from the invoice", (await db.query<{ ok: boolean }>(`select bool_and(student_id='${s1.id}') as ok from payments where invoice_id='${inv1}'`)).rows[0].ok);
+  check("collected_by is the session user", (await db.query<{ ok: boolean }>(`select bool_and(collected_by='${uid.organizer}') as ok from payments`)).rows[0].ok);
+  check("overpayment rejected (invoice already fully paid)", !!(await tryErr(pay(inv1, 1))));
+
+  check("a PENDING payment doesn't count, so it is allowed", !(await tryErr(pay(inv1, 500, "PENDING"))));
+  const pendingId = (await db.query<{ id: string }>(`select id from payments where status='PENDING'`)).rows[0].id;
+  check("PENDING cannot become PAID if it would overpay", !!(await tryErr(`update payments set status='PAID' where id='${pendingId}'`)));
+  check("PENDING can become FAILED", !(await tryErr(`update payments set status='FAILED' where id='${pendingId}'`)));
+  check("FAILED is terminal", !!(await tryErr(`update payments set status='PAID' where id='${pendingId}'`)));
+
+  payId2 = (await db.query<{ id: string }>(`select id from payments where invoice_id='${inv1}' and amount=800`)).rows[0].id;
+  check("amount is immutable", !!(await tryErr(`update payments set amount=1 where id='${payId2}'`)));
+  check("receipt_no is immutable", !!(await tryErr(`update payments set receipt_no='X' where id='${payId2}'`)));
+  check("invoice_id is immutable", !!(await tryErr(`update payments set invoice_id='${inv2}' where id='${payId2}'`)));
+  check("notes can be edited", !(await tryErr(`update payments set notes='cheque 123' where id='${payId2}'`)));
+  check("amount_due cannot drop below what is paid", !!(await tryErr(`update invoices set amount_due=1500 where id='${inv1}'`)));
+  check("an invoice with payments cannot be voided", !!(await tryErr(`update invoices set voided_at=now() where id='${inv1}'`)));
+
+  check("refund keeps the row (PAID -> REFUNDED)", !(await tryErr(`update payments set status='REFUNDED' where id='${payId2}'`)));
+  check("REFUNDED is terminal", !!(await tryErr(`update payments set status='PAID' where id='${payId2}'`)));
+  check("a refund frees the balance for a new payment", !(await tryErr(pay(inv1, 800))));
+  check("history preserved: refunded payment still exists", (await count(`select 1 from payments where status='REFUNDED'`)) === 1);
+
+  check("a guardian not linked to the student is rejected", !!(await tryErr(pay(inv2, 500, "PAID", `,'${g1.id}',DEFAULT`))));
+  check("the student's own guardian is accepted", !(await tryErr(pay(inv2, 500, "PAID", `,'${g2.id}',DEFAULT`))));
+  check("a future paid_at is rejected", !!(await tryErr(`insert into payments(invoice_id,amount,method,paid_at) values ('${inv2}',10,'CASH', now() + interval '1 day')`)));
+  check("payments cannot be deleted", !!(await tryErr(`delete from payments`)));
+  check("invoices cannot be deleted", !!(await tryErr(`delete from invoices`)));
+
+  const inv3 = (await db.query<{ id: string }>(invoiceSql(s1.id, 100, "Mistaken"))).rows[0].id;
+  check("an unpaid invoice can be voided", !(await tryErr(`update invoices set voided_at=now() where id='${inv3}'`)));
+  check("no payment on a voided invoice", !!(await tryErr(pay(inv3, 10))));
+  check("a voided invoice cannot be reinstated", !!(await tryErr(`update invoices set voided_at=null where id='${inv3}'`)));
+});
+
+for (const u of ["student1", "parent1"]) {
+  await as(u, async () => {
+    check(`${u} sees only their own invoices/payments`, (await count(`select 1 from invoices where student_id='${s2.id}'`)) === 0 && (await count(`select 1 from payments where student_id='${s2.id}'`)) === 0 && (await count(`select 1 from payments`)) >= 3);
+  });
+}
+for (const u of ["student2", "parent2"]) {
+  await as(u, async () => check(`${u} sees only their own invoices`, (await count(`select 1 from invoices where student_id='${s1.id}'`)) === 0 && (await count(`select 1 from invoices`)) === 1));
+}
+for (const u of ["teacher", "teacher2", "student3"]) {
+  await as(u, async () => check(`${u} sees no fee data`, (await count(`select 1 from invoices`)) === 0 && (await count(`select 1 from payments`)) === 0));
+}
+for (const u of ["student1", "parent1", "teacher"]) {
+  await as(u, async () => {
+    check(`${u} cannot create invoices`, !!(await tryErr(invoiceSql(s1.id, 50))));
+    check(`${u} cannot record payments`, !!(await tryErr(pay(inv1, 1))));
+    check(`${u} cannot edit payments`, (await db.query(`update payments set notes='x' returning 1`)).rows.length === 0);
+  });
+}
+await as("student1", async () => {
+  check("fee types are readable but not writable", (await count(`select 1 from fee_types`)) === 1 && !!(await tryErr(`insert into fee_types(code,name) values ('X','X')`)));
+});
+for (const u of ["anon", "student1"]) {
+  await as(u, async () => {
+    check(`${u} cannot call next_receipt_no()`, !!(await tryErr(`select public.next_receipt_no()`)));
+    check(`${u} cannot call generate_display_id()`, !!(await tryErr(`select public.generate_display_id('STUDENT')`)));
+    check(`${u} cannot call invoice_paid_total()`, !!(await tryErr(`select public.invoice_paid_total('${inv1}')`)));
+  });
+}
+check("anon cannot read invoices", !!(await as("anon", () => tryErr(`select * from invoices`))));
+
 check("cannot link student record to TEACHER profile", !!(await tryErr(`insert into students(profile_id,admission_number,full_name) values ('${uid.teacher2}','Z-1','Z')`)));
 check("cannot link guardian record to STUDENT profile", !!(await tryErr(`insert into guardians(profile_id,full_name) values ('${uid.student1}','Z')`)));
 check("unlinked student record allowed", !(await tryErr(`insert into students(admission_number,full_name) values ('U-1','Unlinked')`)));
@@ -368,6 +453,6 @@ describe("migrations + RLS (embedded Postgres)", () => {
   it("applies idempotently and enforces isolation", async () => {
     const { pass, failures } = await run();
     expect(failures).toEqual([]);
-    expect(pass).toBeGreaterThan(155);
+    expect(pass).toBeGreaterThan(210);
   }, 120_000);
 });

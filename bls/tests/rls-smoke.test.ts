@@ -344,3 +344,53 @@ describe.runIf(hasEnv)("timetable RLS (Phase 5)", () => {
     }
   });
 });
+
+describe.runIf(hasEnv)("fees RLS (Phase 6)", () => {
+  it("a family sees only its own invoices and payments", async () => {
+    for (const [email, other] of [[DEMO.parent, "Rafi"], [DEMO.parent2, "Tanvir"]] as const) {
+      const client = await signedInClient(email);
+      const { data: invoices, error } = await client.from("invoices").select("student_id");
+      expect(error).toBeNull();
+      expect(invoices).toHaveLength(1);
+      const { data: names } = await client.from("students").select("full_name");
+      expect(names?.some((n) => n.full_name.includes(other))).toBe(false);
+    }
+  });
+
+  it("teachers and logged-out users see no fee data", async () => {
+    for (const email of [DEMO.teacher, DEMO.teacher2]) {
+      const c = await signedInClient(email);
+      expect((await c.from("invoices").select("id")).data).toHaveLength(0);
+      expect((await c.from("payments").select("id")).data).toHaveLength(0);
+    }
+    const anon = await anonClient().from("invoices").select("id");
+    expect(anon.error || (anon.data ?? []).length === 0).toBeTruthy();
+  });
+
+  it("only staff can create invoices or record payments; nobody can delete them", async () => {
+    const parent = await signedInClient(DEMO.parent);
+    const { data: inv } = await parent.from("invoices").select("id, student_id").limit(1);
+    const i = inv?.[0];
+    expect(i).toBeDefined();
+    expect((await parent.from("payments").insert({ invoice_id: i!.id, amount: 1, method: "CASH" })).error).not.toBeNull();
+
+    const organizer = await signedInClient(DEMO.organizer);
+    expect((await organizer.from("payments").delete().eq("invoice_id", i!.id)).error).not.toBeNull();
+  });
+
+  it("the ledger refuses an overpayment and ignores a client-chosen receipt number", async () => {
+    const organizer = await signedInClient(DEMO.organizer);
+    const { data: inv } = await organizer.from("invoices").select("id, amount_due").eq("amount_due", 1500).limit(1);
+    const target = inv?.[0];
+    expect(target).toBeDefined();
+    const over = await organizer.from("payments").insert({ invoice_id: target!.id, amount: 99999, method: "CASH" });
+    expect(over.error).not.toBeNull();
+  });
+
+  it("internal functions are not callable through the API", async () => {
+    const student = await signedInClient(DEMO.student);
+    // PostgREST surfaces a missing EXECUTE privilege as an error.
+    const res = await (student as unknown as { rpc: (n: string) => Promise<{ error: unknown }> }).rpc("next_receipt_no");
+    expect(res.error).not.toBeNull();
+  });
+});

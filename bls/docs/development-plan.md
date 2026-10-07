@@ -57,7 +57,15 @@ events, gallery, admissions, public website content, mobile app.
 - [x] Staff editor; teacher "my lessons"; student/parent grid for their child's section; grid builder unit-tested
 - Not in Phase 5: drag-and-drop editing, substitution/cover teachers, exam timetables, calendar export
 
-## Phase 6+ (not started)
+## Phase 6 — Fees, payments, receipts (done — awaiting verification against a live Supabase project)
+
+- [x] Fee types, per-student and whole-section invoices, voiding; payments with all eight methods and five statuses
+- [x] Ledger integrity in the database: no overpayment (row-locked), immutable amounts, no deletes, refunds keep history, server-generated receipt numbers
+- [x] Bilingual printable receipt per the brief (large ৳ amount, "Payment Received Successfully"); student/parent fee views
+- [x] Internal functions no longer callable through the API (also fixes Phase 1's `generate_display_id`)
+- Not in Phase 6: live payment-gateway integration, server-rendered PDF files (print-to-PDF instead), fee discounts/waivers/late fees, SMS/email receipts
+
+## Phase 7+ (not started)
 
 Exams/Results/Report cards → Timetable → Fees/Payments/Receipts →
 Notices/Events/Gallery → Admissions/public website/CMS → React Native/Expo mobile app.

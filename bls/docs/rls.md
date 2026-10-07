@@ -87,6 +87,15 @@ its own tests in `tests/migrations.test.ts` (new day, existing day, wrong-sectio
 `timetable_entries` SELECT = staff / `owns_teacher` / `teaches_class_section` / `student_in_class_section`; all writes staff-only. The
 double-booking guarantee is a partial unique index (not a policy), so it holds for every writer including service_role.
 
+## Phase 6: ledger triggers and function privileges
+
+Policies are simple (staff, owner, linked guardian). The safety is in triggers (`validate_invoice`, `validate_payment`) — see
+`docs/database.md`. **Function privileges matter too:** Postgres (and Supabase's default privileges) make new functions executable by
+everyone, so `next_receipt_no()` would otherwise be callable by an anonymous visitor through `/rest/v1/rpc/…` and could burn receipt numbers.
+Migration 0010 revokes EXECUTE from `public, anon, authenticated` on `next_receipt_no`, `invoice_paid_total` and — closing the same hole
+from Phase 1 — `generate_display_id`. Triggers still work because they run as their `SECURITY DEFINER` owner. The embedded-Postgres test
+asserts that `anon` and a student get "permission denied" for all three.
+
 ## `current_profile_role()` and recursion
 
 Any policy on `profiles` that needs to know the caller's role can't just `SELECT role FROM profiles

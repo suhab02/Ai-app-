@@ -27,7 +27,9 @@ file after a partial failure finishes the job instead of erroring on "already ex
 
 - `0009_timetable.sql` — `timetable_periods`, `timetable_entries` (clash + coherence triggers), RLS.
 
-**Apply order matters**: run `0001` → `0009` in order; each depends on the previous ones.
+- `0010_fees.sql` — `fee_types`, `invoices`, `payments`, receipt numbering, ledger triggers, RLS, and revokes API access to internal functions.
+
+**Apply order matters**: run `0001` → `0010` in order; each depends on the previous ones.
 
 ## Schema (Phase 1)
 
@@ -117,6 +119,25 @@ the overall result** (GPA 0, lowest band's letter).
 `validate_timetable_entry()`: no lessons in break periods, and a named teacher must be assigned that subject in that section
 (`teacher_assignments` stays the single source of truth). The school week is data: Sunday–Thursday columns always show; Friday/Saturday
 appear only if a lesson exists. Students/guardians see subject and room but not teacher names (the `teachers` table is not readable by them).
+
+## Schema (Phase 6)
+
+| Table | Key columns / constraints |
+| --- | --- |
+| `fee_types` | `code` unique, bilingual name |
+| `invoices` | student + academic year + fee type, `amount_due numeric(12,2) > 0`, `due_date`, `voided_at` (void, never delete) |
+| `payments` | invoice, student (derived from the invoice), optional guardian (must be linked to the student), `amount numeric(12,2) > 0`, `method` CASH/BANK/BKASH/NAGAD/ROCKET/CARD/ONLINE/OTHER, `status` PENDING/PAID/FAILED/REFUNDED/PARTIAL, `receipt_no` unique, `collected_by` |
+| `receipt_counters` | internal: one row per year, drives `BLS-RCPT-<year>-<6 digits>` |
+
+Ledger rules, all enforced by triggers so they hold for every writer: **money is numeric, never float** (the app does arithmetic in integer
+paisa); a payment **cannot overpay** an invoice (the invoice row is locked `FOR UPDATE`, so two cashiers collecting at once cannot both
+succeed past the limit); amount / invoice / student / method / receipt number / collected-by are **immutable**; status moves only
+PENDING→PAID/PARTIAL/FAILED and PAID/PARTIAL→REFUNDED; **there is no delete grant or policy**, so a mistake is a refund and the history
+stays. Only PAID and PARTIAL payments count toward a balance. Receipt numbers, `collected_by` and the payment's student come from the
+database, never from the request.
+
+**Not built:** live gateway integration (bKash/Nagad/Rocket/card need merchant credentials) — Phase 6 *records* how a payment was made;
+an ONLINE/BKASH row today means "staff recorded it". Wiring a gateway would add a webhook route that inserts PENDING→PAID rows.
 
 ## Design choices worth knowing
 

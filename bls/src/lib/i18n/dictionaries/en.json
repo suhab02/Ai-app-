@@ -100,6 +100,30 @@
       "SIBLING": "Sibling",
       "LEGAL_GUARDIAN": "Legal guardian",
       "OTHER": "Other"
+    },
+    "paymentMethod": {
+      "CASH": "Cash",
+      "BANK": "Bank",
+      "BKASH": "bKash",
+      "NAGAD": "Nagad",
+      "ROCKET": "Rocket",
+      "CARD": "Card",
+      "ONLINE": "Online",
+      "OTHER": "Other"
+    },
+    "paymentStatus": {
+      "PENDING": "Pending",
+      "PAID": "Paid",
+      "FAILED": "Failed",
+      "REFUNDED": "Refunded",
+      "PARTIAL": "Partial"
+    },
+    "invoiceState": {
+      "UNPAID": "Unpaid",
+      "PARTIAL": "Part paid",
+      "PAID": "Paid",
+      "OVERDUE": "Overdue",
+      "VOID": "Void"
     }
   },
   "admin": {
@@ -307,5 +331,61 @@
     "mine": "My lessons",
     "teacherNote": "The teacher must be assigned this subject in this section.",
     "choose": "Choose…"
+  },
+  "fees": {
+    "title": "Fees",
+    "feeTypes": "Fee types",
+    "code": "Code",
+    "name": "Name",
+    "nameBn": "Name (Bangla)",
+    "newInvoice": "New invoice",
+    "student": "Student",
+    "section": "Class section",
+    "feeType": "Fee type",
+    "amount": "Amount",
+    "dueDate": "Due date",
+    "description": "Description",
+    "forStudent": "One student",
+    "forSection": "Whole section",
+    "createInvoices": "Create invoices",
+    "recordPayment": "Record payment",
+    "invoice": "Invoice",
+    "method": "Method",
+    "status": "Status",
+    "guardian": "Paid by (guardian)",
+    "anyone": "Not recorded",
+    "reference": "Reference / transaction no.",
+    "notes": "Notes",
+    "save": "Save",
+    "invoices": "Invoices",
+    "payments": "Payments",
+    "due": "Due",
+    "paid": "Paid",
+    "balance": "Balance",
+    "receipt": "Receipt",
+    "viewReceipt": "Receipt",
+    "refund": "Refund",
+    "void": "Void invoice",
+    "noInvoices": "No invoices yet.",
+    "noPayments": "No payments yet.",
+    "choose": "Choose…",
+    "outstanding": "outstanding",
+    "create": "Create",
+    "ledgerNote": "Payments are never deleted. A mistake is corrected by refunding the payment, which keeps the history.",
+    "receiptDoc": {
+      "title": "PAYMENT RECEIPT",
+      "receiptNo": "Receipt No",
+      "feeType": "Fee Type",
+      "studentName": "Student Name",
+      "dateTime": "Date & Time",
+      "method": "Payment Method",
+      "amountPaid": "Amount Paid",
+      "success": "Payment Received Successfully",
+      "notValid": "This payment is not a completed payment, so no receipt is issued.",
+      "refunded": "This payment has been refunded.",
+      "print": "Print / save as PDF",
+      "back": "Back to fees",
+      "reference": "Reference"
+    }
   }
 }
