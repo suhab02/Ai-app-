@@ -27,6 +27,8 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/dashboard/admin/academic", labelKey: "nav.academic", roles: STAFF },
   { href: "/dashboard/admin/people", labelKey: "nav.people", roles: STAFF },
   { href: "/dashboard/admin/relationships", labelKey: "nav.relationships", roles: STAFF },
+  { href: "/dashboard/admin/admissions", labelKey: "nav.admissions", roles: STAFF },
+  { href: "/dashboard/admin/website", labelKey: "nav.website", roles: STAFF },
 ];
 
 function visibleItems(role: UserRole) {

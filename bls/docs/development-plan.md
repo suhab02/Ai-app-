@@ -73,7 +73,15 @@ events, gallery, admissions, public website content, mobile app.
 - [x] PRIVATE `student-documents` bucket with policies and tests (staff all; student / linked guardian read own folder)
 - Not in Phase 7: UI to upload/view student documents, notice read-receipts, push/SMS delivery, image resizing/thumbnails
 
-## Phase 8+ (not started)
+## Phase 8 — Admissions, public website, CMS (done — awaiting verification against a live Supabase project)
+
+- [x] Public site (no login): home, about, admissions form, news & events, gallery, contact — English/Bangla, mobile-first
+- [x] Anonymous, insert-only admission applications (column-level grant + policy + CHECKs + honeypot); staff review queue with notes
+- [x] Small plain-text CMS for the public pages, editable in both languages
+- Not in Phase 8: CAPTCHA / edge rate limiting (recommended before launch), accepted-application → student conversion, applicant status lookup, rich-text editing, SEO sitemap
+
+## After Phase 8
+
 
 Exams/Results/Report cards → Timetable → Fees/Payments/Receipts →
 Notices/Events/Gallery → Admissions/public website/CMS → React Native/Expo mobile app.

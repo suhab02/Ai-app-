@@ -521,6 +521,65 @@ for (const u of ["student2", "parent2", "teacher", "teacher2", "anon"]) {
 await as("student1", async () => check("student cannot delete documents", (await db.query(`delete from storage.objects where bucket_id='student-documents' returning 1`)).rows.length === 0));
 await as("organizer", async () => check("staff can delete documents", (await db.query(`delete from storage.objects where bucket_id='student-documents' returning 1`)).rows.length === 1));
 
+// ---- Phase 8: admissions + site content ------------------------------------
+const dobYearsAgo = (n: number) => `(public.school_today() - interval '${n} years')::date`;
+const applySql = (over: Record<string, string> = {}, returning = "") => {
+  const f: Record<string, string> = {
+    applicant_name: "'Little Applicant'",
+    date_of_birth: dobYearsAgo(8),
+    desired_class: "'Class 3'",
+    guardian_name: "'Proud Guardian'",
+    guardian_phone: "'+880 1700-000000'",
+    ...over,
+  };
+  return `insert into admission_applications(${Object.keys(f).join(",")}) values (${Object.values(f).join(",")}) ${returning}`;
+};
+
+await as("anon", async () => {
+  check("a visitor can submit an application", !(await tryErr(applySql())));
+  check("a visitor cannot choose the status", !!(await tryErr(applySql({ status: "'ACCEPTED'" }))));
+  check("a visitor cannot set reviewer fields", !!(await tryErr(applySql({ reviewed_by: `'${uid.admin}'` }))) && !!(await tryErr(applySql({ review_notes: "'approved'" }))));
+  check("a visitor cannot read back what they submitted", !!(await tryErr(applySql({}, "returning id"))));
+  check("a visitor cannot read applications", !!(await tryErr(`select * from admission_applications`)));
+  check("a visitor cannot update or delete", !!(await tryErr(`update admission_applications set status='ACCEPTED'`)) && !!(await tryErr(`delete from admission_applications`)));
+  check("bad phone rejected", !!(await tryErr(applySql({ guardian_phone: "'call me maybe'" }))));
+  check("bad email rejected", !!(await tryErr(applySql({ guardian_email: "'not-an-email'" }))));
+  check("a good email is accepted", !(await tryErr(applySql({ guardian_email: "'parent@example.com'" }))));
+  check("oversized message rejected", !!(await tryErr(applySql({ message: "repeat('x', 2001)" }))));
+  check("future birth date rejected", !!(await tryErr(applySql({ date_of_birth: "(public.school_today() + 1)" }))));
+  check("implausible birth date rejected", !!(await tryErr(applySql({ date_of_birth: dobYearsAgo(40) }))));
+  check("blank name rejected", !!(await tryErr(applySql({ applicant_name: "' '" }))));
+});
+await as("student1", async () => {
+  check("a signed-in family can also apply", !(await tryErr(applySql({ applicant_name: "'Sibling'" }))));
+  check("but cannot read applications", (await count(`select 1 from admission_applications`)) === 0);
+  check("or change them", (await db.query(`update admission_applications set status='ACCEPTED' returning 1`)).rows.length === 0);
+  check("or forge a status on submit", !!(await tryErr(applySql({ applicant_name: "'Sneaky'", status: "'ACCEPTED'" }))));
+});
+await as("teacher", async () => check("a teacher cannot read applications", (await count(`select 1 from admission_applications`)) === 0));
+await as("organizer", async () => {
+  check("staff read all applications", (await count(`select 1 from admission_applications`)) === 3);
+  check("staff move an application along", !(await tryErr(`update admission_applications set status='UNDER_REVIEW', review_notes='called parent' where applicant_name='Sibling'`)));
+  check("reviewer + time are stamped from the session", (await count(`select 1 from admission_applications where applicant_name='Sibling' and reviewed_by='${uid.organizer}' and reviewed_at is not null`)) === 1);
+  check("a forged reviewer is overwritten", !(await tryErr(`update admission_applications set status='ACCEPTED', reviewed_by='${uid.admin}' where applicant_name='Sibling'`))
+    && (await count(`select 1 from admission_applications where applicant_name='Sibling' and reviewed_by='${uid.organizer}'`)) === 1);
+  check("applications cannot be deleted, even by staff", !!(await tryErr(`delete from admission_applications`)));
+});
+
+check("starter site content is installed", (await count(`select 1 from site_content`)) === 4);
+await as("anon", async () => {
+  check("visitors can read site content", (await count(`select 1 from site_content`)) === 4);
+  check("visitors cannot edit site content", !!(await tryErr(`insert into site_content(key) values ('hack')`)) && (await db.query(`update site_content set body_en='defaced' returning 1`).catch(() => ({ rows: [] }))).rows.length === 0);
+});
+await as("teacher", async () => check("a teacher cannot edit site content", (await db.query(`update site_content set body_en='x' returning 1`)).rows.length === 0));
+await as("organizer", async () => {
+  check("staff edit a block", !(await tryErr(`update site_content set body_en='New welcome text' where key='home_hero'`)));
+  check("updated_by is stamped from the session", (await count(`select 1 from site_content where key='home_hero' and updated_by='${uid.organizer}'`)) === 1);
+  check("staff add a block", !(await tryErr(`insert into site_content(key,title_en) values ('principal_message','Principal')`)));
+  check("a malformed key is rejected", !!(await tryErr(`insert into site_content(key) values ('Bad Key!')`)));
+  check("site content cannot be deleted", !!(await tryErr(`delete from site_content`)));
+});
+
 check("cannot link student record to TEACHER profile", !!(await tryErr(`insert into students(profile_id,admission_number,full_name) values ('${uid.teacher2}','Z-1','Z')`)));
 check("cannot link guardian record to STUDENT profile", !!(await tryErr(`insert into guardians(profile_id,full_name) values ('${uid.student1}','Z')`)));
 check("unlinked student record allowed", !(await tryErr(`insert into students(admission_number,full_name) values ('U-1','Unlinked')`)));
@@ -549,6 +608,6 @@ describe("migrations + RLS (embedded Postgres)", () => {
   it("applies idempotently and enforces isolation", async () => {
     const { pass, failures } = await run();
     expect(failures).toEqual([]);
-    expect(pass).toBeGreaterThan(290);
+    expect(pass).toBeGreaterThan(325);
   }, 120_000);
 });

@@ -23,7 +23,9 @@
     "users": "Users",
     "academic": "Academic",
     "people": "People",
-    "relationships": "Enrollment"
+    "relationships": "Enrollment",
+    "admissions": "Admissions",
+    "website": "Website"
   },
   "auth": {
     "loginTitle": "Log in to your account",
@@ -443,5 +445,75 @@
     "noPhotos": "No photos yet.",
     "choose": "Choose…",
     "create": "Create"
+  },
+  "public": {
+    "nav": {
+      "home": "Home",
+      "about": "About",
+      "admissions": "Admissions",
+      "events": "News & events",
+      "gallery": "Gallery",
+      "contact": "Contact",
+      "portal": "Portal",
+      "login": "Log in"
+    },
+    "latestNews": "Latest news",
+    "upcomingEvents": "Upcoming events",
+    "photos": "From our gallery",
+    "readMore": "View all",
+    "applyNow": "Apply for admission",
+    "noNews": "No news right now.",
+    "noEvents": "No upcoming events.",
+    "noPhotos": "Photos will appear here soon.",
+    "footer": "© Bright Learning School",
+    "skip": "Skip to content"
+  },
+  "admissions": {
+    "title": "Admission application",
+    "childName": "Child's full name",
+    "childNameBn": "Child's name (Bangla)",
+    "dob": "Date of birth",
+    "gender": "Gender",
+    "desiredClass": "Class applying for",
+    "previousSchool": "Previous school (if any)",
+    "guardianName": "Parent / guardian name",
+    "guardianPhone": "Phone",
+    "guardianEmail": "Email (optional)",
+    "address": "Address",
+    "message": "Anything you would like us to know",
+    "submit": "Submit application",
+    "privacy": "We use these details only to process your application.",
+    "adminTitle": "Admission applications",
+    "all": "All",
+    "none": "No applications.",
+    "applicant": "Applicant",
+    "guardian": "Guardian",
+    "applied": "Applied",
+    "status": "Status",
+    "notes": "Review notes",
+    "update": "Update",
+    "statuses": {
+      "SUBMITTED": "New",
+      "UNDER_REVIEW": "Under review",
+      "ACCEPTED": "Accepted",
+      "REJECTED": "Rejected"
+    }
+  },
+  "website": {
+    "title": "Website content",
+    "help": "Plain text only — paragraphs are separated by a blank line. Each block can be edited in English and Bangla.",
+    "key": "Key",
+    "titleEn": "Title (English)",
+    "titleBn": "Title (Bangla)",
+    "bodyEn": "Text (English)",
+    "bodyBn": "Text (Bangla)",
+    "save": "Save",
+    "newBlock": "New block",
+    "labels": {
+      "home_hero": "Home page banner",
+      "about": "About page",
+      "contact": "Contact page",
+      "admissions_intro": "Admissions page intro"
+    }
   }
 }

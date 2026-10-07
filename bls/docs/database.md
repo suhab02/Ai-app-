@@ -31,7 +31,9 @@ file after a partial failure finishes the job instead of erroring on "already ex
 
 - `0011_notices_events_gallery.sql` — `notices`, `events`, `gallery_albums`/`gallery_photos`, audience helpers, **anon-readable policies**, Storage buckets + `storage.objects` policies.
 
-**Apply order matters**: run `0001` → `0011` in order; each depends on the previous ones.
+- `0012_admissions_cms.sql` — `admission_applications` (anonymous insert-only), `site_content` (public read, staff write) with starter content.
+
+**Apply order matters**: run `0001` → `0012` in order; each depends on the previous ones.
 
 ## Schema (Phase 1)
 
@@ -152,6 +154,15 @@ an ONLINE/BKASH row today means "staff recorded it". Wiring a gateway would add 
 | bucket `student-documents` | **private**, PDF/JPEG/PNG, 10 MB; objects live under `<student uuid>/…`; no upload UI yet |
 
 Public gallery files and private student documents are separate buckets with separate policies on purpose: they must never share security assumptions.
+
+## Schema (Phase 8)
+
+| Table | Notes |
+| --- | --- |
+| `admission_applications` | applicant + guardian fields with length / phone / email CHECKs; a trigger rejects implausible birth dates (a CHECK on `current_date` would not be immutable); `status` SUBMITTED / UNDER_REVIEW / ACCEPTED / REJECTED, `review_notes`, `reviewed_by` + `reviewed_at` (stamped from the session) |
+| `site_content` | `key` (`^[a-z][a-z0-9_]{1,40}$`), bilingual title + body; seeded with `home_hero`, `about`, `contact`, `admissions_intro`; never deleted |
+
+Promoting an accepted application into a `students` row is deliberately manual for now (staff use the People page): it needs an admission number, a section and a guardian link, which are decisions, not data entry.
 
 ## Design choices worth knowing
 

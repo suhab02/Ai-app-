@@ -107,6 +107,16 @@ Unpublishing is staff-only; after publication a teacher cannot change marks (the
 A section-targeted `STUDENTS` notice reaches that section's students only, not their guardians. Audience matching is done in the database
 (`audience_includes_caller`), not in the page.
 
+## Phase 8 access matrix (migration 0012)
+
+| Data | SUPER_ADMIN / ORGANIZER | TEACHER / STUDENT / PARENT | anon (visitor) |
+| --- | --- | --- | --- |
+| admission applications | read, review, update (never delete) | **submit only** (cannot read back, even their own) | **submit only** |
+| website content blocks | read + edit (never delete) | read | read |
+
+An applicant can only write the form's own columns. `status`, `review_notes`, `reviewed_by` and `reviewed_at` cannot be set by them: they are
+not in the column-level `GRANT INSERT`, *and* the INSERT policy re-checks them. Either layer alone blocks it; both are tested.
+
 ## Original scope notes (Phase 2+ targets)
 
 - **ORGANIZER**: students, guardians, teachers, classes, sections, subjects, attendance, homework,

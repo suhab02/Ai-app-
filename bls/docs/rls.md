@@ -107,6 +107,17 @@ Storage policies live on `storage.objects`: `gallery-public` is staff-only to wr
 folder name (`document_student_id()` safely parses it). The test harness stubs `storage.buckets/objects` so these policies are executed,
 not just read. The migration is a no-op (with a NOTICE) on a database without Supabase Storage.
 
+## Phase 8: the only public write
+
+`admission_applications` is insert-only for `anon` and `authenticated`: a column-level `GRANT INSERT (...)` limited to the form's fields, a
+`WITH CHECK (status = 'SUBMITTED' AND reviewer fields null)` policy, **no SELECT grant** for `anon` (so an applicant — or an attacker — can never
+read applications back; the app inserts without `.select()` for that reason), no DELETE for anyone, and staff-only select/update. Bot defence
+is layered outside the database: a honeypot field in the form. **Not included, recommended before launch:** a CAPTCHA (e.g. Cloudflare Turnstile)
+and an edge rate limit — a database cannot tell one anonymous caller from another, and a global per-hour cap would just let a bot lock real
+applicants out.
+
+Website content is plain text, rendered as text (React escapes it) — never HTML or Markdown — so an editor cannot inject script into the public site.
+
 ## `current_profile_role()` and recursion
 
 Any policy on `profiles` that needs to know the caller's role can't just `SELECT role FROM profiles

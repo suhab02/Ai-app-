@@ -34,6 +34,8 @@ export type GuardianRelationship =
 
 export type Gender = "MALE" | "FEMALE" | "OTHER";
 
+export type ApplicationStatus = "SUBMITTED" | "UNDER_REVIEW" | "ACCEPTED" | "REJECTED";
+
 export type NoticeAudience = "ALL" | "TEACHERS" | "STUDENTS" | "PARENTS";
 
 export type PaymentMethod = "CASH" | "BANK" | "BKASH" | "NAGAD" | "ROCKET" | "CARD" | "ONLINE" | "OTHER";
@@ -378,6 +380,37 @@ export type GalleryPhotoRow = {
   created_at: string;
 };
 
+export type AdmissionApplicationRow = {
+  id: string;
+  applicant_name: string;
+  applicant_name_bn: string | null;
+  date_of_birth: string;
+  gender: Gender | null;
+  desired_class: string;
+  previous_school: string | null;
+  guardian_name: string;
+  guardian_phone: string;
+  guardian_email: string | null;
+  address: string | null;
+  message: string | null;
+  status: ApplicationStatus;
+  review_notes: string | null;
+  reviewed_by: string | null;
+  reviewed_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type SiteContentRow = {
+  key: string;
+  title_en: string;
+  title_bn: string;
+  body_en: string;
+  body_bn: string;
+  updated_by: string | null;
+  updated_at: string;
+};
+
 type Table<Row, Required extends keyof Row = never> = {
   Row: Row;
   Insert: Partial<Row> & Pick<Row, Required>;
@@ -428,6 +461,11 @@ export interface Database {
       events: Table<EventRow, "title" | "starts_at">;
       gallery_albums: Table<GalleryAlbumRow, "title">;
       gallery_photos: Table<GalleryPhotoRow, "album_id" | "storage_path">;
+      admission_applications: Table<
+        AdmissionApplicationRow,
+        "applicant_name" | "date_of_birth" | "desired_class" | "guardian_name" | "guardian_phone"
+      >;
+      site_content: Table<SiteContentRow, "key">;
       homework: Table<
         HomeworkRow,
         "academic_year_id" | "class_id" | "section_id" | "subject_id" | "title" | "due_date"

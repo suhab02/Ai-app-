@@ -2,7 +2,7 @@
 
 A bilingual (English/বাংলা) school management platform — public website, admin/organizer/teacher/
 student/guardian portals, attendance, homework, exams, results, fees, and more, built phase by
-phase. This repository is currently on **Phase 7: Notices, events & gallery** (on top of Phase 1 foundation and Phase 2 school data model: students, guardians, teachers, classes, enrollment, user management) — see `docs/development-plan.md` for
+phase. This repository is currently on **Phase 8: public website & admissions** (all planned modules built) (on top of Phase 1 foundation and Phase 2 school data model: students, guardians, teachers, classes, enrollment, user management) — see `docs/development-plan.md` for
 what's built and what's next.
 
 ## Stack
@@ -22,7 +22,7 @@ Apply the database migrations and seed demo accounts before logging in — see
 
 ```bash
 # In the Supabase SQL editor, in order:
-#   supabase/migrations/0001_init.sql … 0011_notices_events_gallery.sql
+#   supabase/migrations/0001_init.sql … 0012_admissions_cms.sql
 
 SEED_ENV=development npm run seed   # 8 demo accounts (every role, plus a second student/parent/teacher for isolation tests)
 npm run test:rls                    # RLS smoke tests

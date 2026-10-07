@@ -281,6 +281,7 @@ async function seedSchoolData(admin: Admin, profileIds: Record<string, string>) 
   await seedAttendanceAndHomework({ admin, yearId: year.id, classId: cls.id, sections, subjects, studentIds, teacherId: assignedTeacherId });
   await seedTimetable({ admin, yearId: year.id, classId: cls.id, sectionId: sections.A, subjects, teacherId: assignedTeacherId });
   await seedCommunications({ admin, sectionAId: sections.A });
+  await seedAdmission(admin);
   await seedFees({ admin, yearId: year.id, studentIds });
   await seedAssessments({ admin, yearId: year.id, classId: cls.id, sectionId: sections.A, subjects, studentId: studentIds["student@brightlearning.test"] });
 
@@ -606,6 +607,27 @@ async function seedCommunications(args: { admin: Admin; sectionAId: string }) {
   if (photoError) throw photoError;
 
   console.log("Communications ready (3 notices, 1 public event, 1 album with a photo)");
+}
+
+
+/** Phase 8 sample data: one pending admission application for the review queue. (Site content ships with migration 0012.) */
+async function seedAdmission(admin: Admin) {
+  const name = "Ayesha Rahman (sample application)";
+  const { data: existing, error } = await admin.from("admission_applications").select("id").eq("applicant_name", name).maybeSingle();
+  if (error) throw error;
+  if (existing) return;
+  const { error: insertError } = await admin.from("admission_applications").insert({
+    applicant_name: name,
+    date_of_birth: schoolDate(-365 * 6),
+    gender: "FEMALE",
+    desired_class: "Class 1",
+    guardian_name: "Rahim Rahman",
+    guardian_phone: "+8801700000000",
+    guardian_email: "rahim@example.com",
+    message: "We would like to visit the school.",
+  });
+  if (insertError) throw insertError;
+  console.log("Admission queue ready (1 sample application)");
 }
 
 main().catch((error) => {

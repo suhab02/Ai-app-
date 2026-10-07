@@ -439,3 +439,39 @@ describe.runIf(hasEnv)("notices, events & gallery RLS (Phase 7)", () => {
     expect(list.error || (list.data ?? []).length === 0).toBeTruthy();
   });
 });
+
+describe.runIf(hasEnv)("admissions & website content RLS (Phase 8)", () => {
+  const application = (name: string) => ({
+    applicant_name: name,
+    date_of_birth: "2019-05-01",
+    desired_class: "Class 1",
+    guardian_name: "Test Guardian",
+    guardian_phone: "+8801700000001",
+  });
+
+  it("a visitor can submit but cannot read, change or choose a status", async () => {
+    const anon = anonClient();
+    expect((await anon.from("admission_applications").insert(application("Smoke Test Child"))).error).toBeNull();
+    expect((await anon.from("admission_applications").select("id")).error).not.toBeNull();
+    expect((await anon.from("admission_applications").insert({ ...application("Sneaky"), status: "ACCEPTED" })).error).not.toBeNull();
+    expect((await anon.from("admission_applications").delete().neq("id", "00000000-0000-0000-0000-000000000000")).error).not.toBeNull();
+  });
+
+  it("only staff can read and review applications", async () => {
+    for (const email of [DEMO.teacher, DEMO.student, DEMO.parent]) {
+      const { data } = await (await signedInClient(email)).from("admission_applications").select("id");
+      expect(data ?? []).toHaveLength(0);
+    }
+    const organizer = await signedInClient(DEMO.organizer);
+    const { data, error } = await organizer.from("admission_applications").select("id");
+    expect(error).toBeNull();
+    expect((data ?? []).length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("website content is public to read but only staff can edit", async () => {
+    expect(((await anonClient().from("site_content").select("key")).data ?? []).length).toBeGreaterThanOrEqual(4);
+    expect((await anonClient().from("site_content").insert({ key: "defaced" })).error).not.toBeNull();
+    const teacher = await signedInClient(DEMO.teacher);
+    expect((await teacher.from("site_content").update({ body_en: "x" }).eq("key", "about").select()).data ?? []).toHaveLength(0);
+  });
+});
