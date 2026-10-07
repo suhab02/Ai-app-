@@ -280,5 +280,32 @@
     "scaleRange": "Score from",
     "signature": "Class teacher",
     "principal": "Principal"
+  },
+  "timetable": {
+    "title": "Timetable",
+    "period": "Period",
+    "time": "Time",
+    "break": "Break",
+    "free": "—",
+    "section": "Class section",
+    "show": "Show",
+    "addPeriod": "Add period",
+    "periodNo": "Period no.",
+    "label": "Label",
+    "start": "Start",
+    "end": "End",
+    "isBreak": "Break (no lesson)",
+    "addLesson": "Schedule a lesson",
+    "day": "Day",
+    "subject": "Subject",
+    "teacher": "Teacher",
+    "noTeacher": "No teacher yet",
+    "room": "Room",
+    "remove": "Remove",
+    "noPeriods": "No periods are set up yet.",
+    "noTimetable": "No timetable has been published for your class yet.",
+    "mine": "My lessons",
+    "teacherNote": "The teacher must be assigned this subject in this section.",
+    "choose": "Choose…"
   }
 }

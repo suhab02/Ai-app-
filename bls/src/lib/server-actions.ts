@@ -1,4 +1,6 @@
+import { revalidatePath } from "next/cache";
 import * as z from "zod";
+import { requireStaff } from "@/lib/auth/dal";
 import { createClient } from "@/lib/supabase/server";
 
 export type ActionResult = { ok?: string; error?: string } | undefined;
@@ -24,4 +26,29 @@ export function friendly(error: DbError): string {
 
 export function zodMessage(error: z.ZodError): string {
   return error.issues.map((i) => (i.path.length ? `${i.path.join(".")}: ${i.message}` : i.message)).join("; ");
+}
+
+/**
+ * The standard staff-only write: role guard → Zod → one database operation → revalidate.
+ * The database (RLS + triggers) is the final gate; a forged post from a non-staff account
+ * fails at requireStaff() and again at RLS.
+ */
+export async function runStaff<S extends z.ZodType>(
+  formData: FormData,
+  schema: S,
+  paths: string[],
+  message: string,
+  op: (input: z.output<S>, db: Db) => PromiseLike<{ error: DbError | null }>,
+): Promise<ActionResult> {
+  await requireStaff();
+
+  const parsed = schema.safeParse(fields(formData));
+  if (!parsed.success) return { error: zodMessage(parsed.error) };
+
+  const db = await createClient();
+  const { error } = await op(parsed.data, db);
+  if (error) return { error: friendly(error) };
+
+  for (const path of paths) revalidatePath(path);
+  return { ok: message };
 }

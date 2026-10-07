@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import * as z from "zod";
 import { requireStaff } from "@/lib/auth/dal";
 import { createClient } from "@/lib/supabase/server";
-import { fields, friendly, zodMessage, type ActionResult } from "@/lib/server-actions";
+import { fields, friendly, runStaff as run, type ActionResult } from "@/lib/server-actions";
 import { resolveSection } from "@/lib/school/resolve";
 
 // Every action: (1) requireStaff() re-checks the caller server-side,
@@ -27,31 +27,6 @@ const checkbox = z
   .string()
   .optional()
   .transform((v) => v === "on" || v === "true");
-
-async function run<S extends z.ZodType>(
-  formData: FormData,
-  schema: S,
-  paths: string[],
-  message: string,
-  op: (
-    input: z.output<S>,
-    db: Awaited<ReturnType<typeof createClient>>,
-  ) => PromiseLike<{ error: { code?: string; message: string } | null }>,
-): Promise<ActionResult> {
-  await requireStaff();
-
-  const parsed = schema.safeParse(fields(formData));
-  if (!parsed.success) {
-    return { error: zodMessage(parsed.error) };
-  }
-
-  const db = await createClient();
-  const { error } = await op(parsed.data, db);
-  if (error) return { error: friendly(error) };
-
-  for (const path of paths) revalidatePath(path);
-  return { ok: message };
-}
 
 // ---------------------------------------------------------------- users
 

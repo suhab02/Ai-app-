@@ -279,6 +279,7 @@ async function seedSchoolData(admin: Admin, profileIds: Record<string, string>) 
   }
 
   await seedAttendanceAndHomework({ admin, yearId: year.id, classId: cls.id, sections, subjects, studentIds, teacherId: assignedTeacherId });
+  await seedTimetable({ admin, yearId: year.id, classId: cls.id, sectionId: sections.A, subjects, teacherId: assignedTeacherId });
   await seedAssessments({ admin, yearId: year.id, classId: cls.id, sectionId: sections.A, subjects, studentId: studentIds["student@brightlearning.test"] });
 
   console.log("\nSchool data ready: 2025-2026 / Class 5 (A, B) / 4 subjects / 2 students / 2 guardians / 2 teachers");
@@ -422,6 +423,62 @@ async function seedAssessments(args: {
     }
   }
   console.log("Assessments ready (2 published, 1 draft) for 5-A");
+}
+
+
+/** Phase 5 sample data: three periods, a recess, and a Sunday–Tuesday Math/English timetable for 5-A. */
+async function seedTimetable(args: {
+  admin: Admin;
+  yearId: string;
+  classId: string;
+  sectionId: string;
+  subjects: Record<string, string>;
+  teacherId: string | undefined;
+}) {
+  const { admin, yearId, classId, sectionId, subjects, teacherId } = args;
+
+  const periodDefs = [
+    { period_no: 1, label: "Period 1", start_time: "09:00", end_time: "09:45", is_break: false },
+    { period_no: 2, label: "Period 2", start_time: "09:50", end_time: "10:35", is_break: false },
+    { period_no: 3, label: "Recess", start_time: "10:35", end_time: "11:00", is_break: true },
+    { period_no: 4, label: "Period 3", start_time: "11:00", end_time: "11:45", is_break: false },
+  ];
+  const periodIds: Record<number, string> = {};
+  for (const def of periodDefs) {
+    const row = await must(
+      `period ${def.period_no}`,
+      admin.from("timetable_periods").upsert(def, { onConflict: "period_no" }).select("id").single(),
+    );
+    periodIds[def.period_no] = row.id;
+  }
+
+  // weekday 0 = Sunday. Both MATH and ENG are assigned to the seeded teacher for 5-A.
+  const lessons = [
+    { weekday: 0, period: 1, subject: "MATH", room: "101" },
+    { weekday: 0, period: 2, subject: "ENG", room: "101" },
+    { weekday: 1, period: 1, subject: "BAN", room: "101" },
+    { weekday: 1, period: 2, subject: "MATH", room: "101" },
+    { weekday: 2, period: 1, subject: "SCI", room: "Lab" },
+    { weekday: 2, period: 4, subject: "ENG", room: "101" },
+  ];
+  for (const l of lessons) {
+    const teaches = l.subject === "MATH" || l.subject === "ENG";
+    const { error } = await admin.from("timetable_entries").upsert(
+      {
+        academic_year_id: yearId,
+        class_id: classId,
+        section_id: sectionId,
+        weekday: l.weekday,
+        period_id: periodIds[l.period],
+        subject_id: subjects[l.subject],
+        teacher_id: teaches ? (teacherId ?? null) : null,
+        room: l.room,
+      },
+      { onConflict: "section_id,weekday,period_id" },
+    );
+    if (error) throw error;
+  }
+  console.log("Timetable ready (4 periods, 6 lessons) for 5-A");
 }
 
 main().catch((error) => {

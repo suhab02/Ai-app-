@@ -318,3 +318,29 @@ describe.runIf(hasEnv)("assessments & results RLS (Phase 4)", () => {
     }
   });
 });
+
+describe.runIf(hasEnv)("timetable RLS (Phase 5)", () => {
+  it("students and parents see only their section's timetable", async () => {
+    const a = await signedInClient(DEMO.student);
+    expect(((await a.from("timetable_entries").select("id")).data ?? []).length).toBe(6);
+    expect(((await (await signedInClient(DEMO.parent)).from("timetable_entries").select("id")).data ?? []).length).toBe(6);
+    expect((await (await signedInClient(DEMO.student2)).from("timetable_entries").select("id")).data).toHaveLength(0);
+    expect((await (await signedInClient(DEMO.parent2)).from("timetable_entries").select("id")).data).toHaveLength(0);
+  });
+
+  it("an unassigned teacher sees no timetable; periods are readable by everyone", async () => {
+    const teacher2 = await signedInClient(DEMO.teacher2);
+    expect((await teacher2.from("timetable_entries").select("id")).data).toHaveLength(0);
+    expect(((await teacher2.from("timetable_periods").select("id")).data ?? []).length).toBe(4);
+  });
+
+  it("only staff can change the timetable", async () => {
+    for (const email of [DEMO.teacher, DEMO.student, DEMO.parent]) {
+      const client = await signedInClient(email);
+      const upd = await client.from("timetable_entries").update({ room: "hacked" }).select();
+      expect(upd.data ?? []).toHaveLength(0);
+      const ins = await client.from("timetable_periods").insert({ period_no: 99, label: "x", start_time: "01:00", end_time: "02:00" });
+      expect(ins.error).not.toBeNull();
+    }
+  });
+});

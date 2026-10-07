@@ -300,6 +300,46 @@ await as("organizer", async () => {
 });
 await as("student1", async () => check("unpublished again hides marks from student", (await count(`select 1 from assessment_results`)) === 0));
 
+// ---- Phase 5: timetable --------------------------------------------------
+const p1 = await one(`insert into timetable_periods(period_no,label,start_time,end_time) values (1,'Period 1','09:00','09:45') returning id`);
+const p2 = await one(`insert into timetable_periods(period_no,label,start_time,end_time) values (2,'Period 2','09:50','10:35') returning id`);
+const pBreak = await one(`insert into timetable_periods(period_no,label,start_time,end_time,is_break) values (3,'Recess','10:35','11:00',true) returning id`);
+const t3 = await one(`insert into teachers(full_name) values ('Teacher Three') returning id`);
+await db.query(`insert into teacher_assignments(teacher_id,academic_year_id,class_id,section_id,subject_id) values ($1,$2,$3,$4,$5),($1,$2,$3,$6,$5)`, [t3.id, yr.id, cls.id, secA.id, sub.id, secB.id]);
+
+const tt = (secId: string, weekday: number, periodId: string, subjectId: string, teacherId: string | null) =>
+  `insert into timetable_entries(academic_year_id,class_id,section_id,weekday,period_id,subject_id,teacher_id) values ('${yr.id}','${cls.id}','${secId}',${weekday},'${periodId}','${subjectId}',${teacherId ? `'${teacherId}'` : "null"})`;
+
+check("period times must be ordered", !!(await tryErr(`insert into timetable_periods(period_no,label,start_time,end_time) values (9,'Bad','10:00','09:00')`)));
+await as("organizer", async () => {
+  check("staff schedules a lesson (teacher is assigned that subject)", !(await tryErr(tt(secA.id, 0, p1.id, sub.id, t1.id))));
+  check("a teacher not assigned that subject is rejected", !!(await tryErr(tt(secA.id, 0, p2.id, sub2.id, t1.id))));
+  check("a teacher not assigned to that section is rejected", !!(await tryErr(tt(secB.id, 0, p1.id, sub.id, t1.id))));
+  check("lessons can't go in a break period", !!(await tryErr(tt(secA.id, 0, pBreak.id, sub.id, null))));
+  check("a section has one lesson per slot", !!(await tryErr(tt(secA.id, 0, p1.id, sub.id, null))));
+  check("weekday must be 0-6", !!(await tryErr(tt(secA.id, 7, p2.id, sub.id, null))));
+  check("a lesson with no teacher yet is allowed", !(await tryErr(tt(secA.id, 1, p1.id, sub.id, null))));
+  check("teacher3 scheduled in section A", !(await tryErr(tt(secA.id, 2, p1.id, sub.id, t3.id))));
+  check("teacher cannot be double-booked in another section at the same time", !!(await tryErr(tt(secB.id, 2, p1.id, sub.id, t3.id))));
+  check("same teacher, different slot is fine", !(await tryErr(tt(secB.id, 2, p2.id, sub.id, t3.id))));
+  check("staff can reschedule within the rules", !(await tryErr(`update timetable_entries set room='101' where section_id='${secA.id}' and weekday=0 and period_id='${p1.id}'`)));
+});
+await as("student1", async () => {
+  check("student1 sees their section's timetable only", (await count(`select 1 from timetable_entries`)) === 3 && (await count(`select 1 from timetable_entries where section_id='${secB.id}'`)) === 0);
+  check("anyone can read periods", (await count(`select 1 from timetable_periods`)) === 3);
+});
+await as("parent1", async () => check("parent1 sees their child's section only", (await count(`select 1 from timetable_entries where section_id='${secB.id}'`)) === 0 && (await count(`select 1 from timetable_entries`)) === 3));
+await as("student2", async () => check("student2 sees only section B", (await count(`select 1 from timetable_entries`)) === 1 && (await count(`select 1 from timetable_entries where section_id='${secA.id}'`)) === 0));
+await as("teacher", async () => check("assigned teacher sees section A's timetable", (await count(`select 1 from timetable_entries`)) === 3));
+await as("teacher2", async () => check("unassigned teacher sees no timetable", (await count(`select 1 from timetable_entries`)) === 0));
+for (const u of ["teacher", "student1", "parent1"]) {
+  await as(u, async () => {
+    check(`${u} cannot schedule lessons`, !!(await tryErr(tt(secA.id, 3, p1.id, sub.id, null))));
+    check(`${u} cannot change periods`, (await db.query(`update timetable_periods set label='x' returning 1`)).rows.length === 0);
+    check(`${u} cannot delete lessons`, (await db.query(`delete from timetable_entries returning 1`)).rows.length === 0);
+  });
+}
+
 check("cannot link student record to TEACHER profile", !!(await tryErr(`insert into students(profile_id,admission_number,full_name) values ('${uid.teacher2}','Z-1','Z')`)));
 check("cannot link guardian record to STUDENT profile", !!(await tryErr(`insert into guardians(profile_id,full_name) values ('${uid.student1}','Z')`)));
 check("unlinked student record allowed", !(await tryErr(`insert into students(admission_number,full_name) values ('U-1','Unlinked')`)));
@@ -328,6 +368,6 @@ describe("migrations + RLS (embedded Postgres)", () => {
   it("applies idempotently and enforces isolation", async () => {
     const { pass, failures } = await run();
     expect(failures).toEqual([]);
-    expect(pass).toBeGreaterThan(125);
+    expect(pass).toBeGreaterThan(155);
   }, 120_000);
 });

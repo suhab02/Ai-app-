@@ -50,7 +50,14 @@ events, gallery, admissions, public website content, mobile app.
 - [x] Printable report card (per subject %, letter, GP, overall GPA, pass/fail), grading logic unit-tested
 - Not in Phase 4: ranking/positions, weighted terms, comment/remark entry in the UI, PDF files (use print-to-PDF), editing the grading scale in the UI (edit rows)
 
-## Phase 5+ (not started)
+## Phase 5 — Timetable (done — awaiting verification against a live Supabase project)
+
+- [x] Configurable periods (incl. breaks), weekly lessons per section, optional teacher/room
+- [x] Database-enforced: one lesson per slot, no teacher double-booking, teacher must hold the subject in that section, no lessons in breaks
+- [x] Staff editor; teacher "my lessons"; student/parent grid for their child's section; grid builder unit-tested
+- Not in Phase 5: drag-and-drop editing, substitution/cover teachers, exam timetables, calendar export
+
+## Phase 6+ (not started)
 
 Exams/Results/Report cards → Timetable → Fees/Payments/Receipts →
 Notices/Events/Gallery → Admissions/public website/CMS → React Native/Expo mobile app.

@@ -82,6 +82,11 @@ its own tests in `tests/migrations.test.ts` (new day, existing day, wrong-sectio
 `assessment_is_published`) keep the policies one line each. The "published ⇒ frozen" rule lives in triggers because RLS cannot express
 "you may update this row only while it is a draft".
 
+## Phase 5 policies
+
+`timetable_entries` SELECT = staff / `owns_teacher` / `teaches_class_section` / `student_in_class_section`; all writes staff-only. The
+double-booking guarantee is a partial unique index (not a policy), so it holds for every writer including service_role.
+
 ## `current_profile_role()` and recursion
 
 Any policy on `profiles` that needs to know the caller's role can't just `SELECT role FROM profiles

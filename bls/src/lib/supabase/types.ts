@@ -262,6 +262,30 @@ export type AssessmentResultRow = {
   updated_at: string;
 };
 
+export type TimetablePeriodRow = {
+  id: string;
+  period_no: number;
+  label: string;
+  start_time: string;
+  end_time: string;
+  is_break: boolean;
+  created_at: string;
+};
+
+export type TimetableEntryRow = {
+  id: string;
+  academic_year_id: string;
+  class_id: string;
+  section_id: string;
+  weekday: number;
+  period_id: string;
+  subject_id: string;
+  teacher_id: string | null;
+  room: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
 type Table<Row, Required extends keyof Row = never> = {
   Row: Row;
   Insert: Partial<Row> & Pick<Row, Required>;
@@ -300,6 +324,11 @@ export interface Database {
         "academic_year_id" | "class_id" | "section_id" | "subject_id" | "kind" | "name" | "term" | "max_marks"
       >;
       assessment_results: Table<AssessmentResultRow, "assessment_id" | "student_id">;
+      timetable_periods: Table<TimetablePeriodRow, "period_no" | "label" | "start_time" | "end_time">;
+      timetable_entries: Table<
+        TimetableEntryRow,
+        "academic_year_id" | "class_id" | "section_id" | "weekday" | "period_id" | "subject_id"
+      >;
       homework: Table<
         HomeworkRow,
         "academic_year_id" | "class_id" | "section_id" | "subject_id" | "title" | "due_date"

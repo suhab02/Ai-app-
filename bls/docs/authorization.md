@@ -81,6 +81,13 @@ section's teacher can still read the records made while the student was theirs. 
 A classmate's marks are never visible to a student: result rows are matched on `owns_student` / `is_guardian_of_student`, not on section.
 Unpublishing is staff-only; after publication a teacher cannot change marks (the trigger rejects it).
 
+## Phase 5 access matrix (migration 0009)
+
+| Data | SUPER_ADMIN / ORGANIZER | TEACHER | STUDENT | PARENT | anon |
+| --- | --- | --- | --- | --- | --- |
+| periods | read + write | read | read | read | none |
+| timetable entries | read + write | lessons they teach, and their sections' | their section's | their child's section's | none |
+
 ## Original scope notes (Phase 2+ targets)
 
 - **ORGANIZER**: students, guardians, teachers, classes, sections, subjects, attendance, homework,

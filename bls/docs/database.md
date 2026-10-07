@@ -25,7 +25,9 @@ file after a partial failure finishes the job instead of erroring on "already ex
 
 - `0008_assessments.sql` — grading scales + bands (Bangladesh default seeded), `assessments`, `assessment_results`, publish/lock triggers, RLS.
 
-**Apply order matters**: run `0001` → `0008` in order; each depends on the previous ones.
+- `0009_timetable.sql` — `timetable_periods`, `timetable_entries` (clash + coherence triggers), RLS.
+
+**Apply order matters**: run `0001` → `0009` in order; each depends on the previous ones.
 
 ## Schema (Phase 1)
 
@@ -104,6 +106,17 @@ can change the assessment or its marks** (service_role / SQL editor are trusted,
 Report card maths (`src/lib/results/report-card.ts`, unit-tested): per subject, sum(marks) / sum(max) across the term's published
 assessments (an absence counts as 0 but keeps its maximum); overall GPA = mean of subject grade points; **failing any subject fails
 the overall result** (GPA 0, lowest band's letter).
+
+## Schema (Phase 5)
+
+| Table | Key columns / constraints |
+| --- | --- |
+| `timetable_periods` | `period_no` unique, `start_time < end_time`, `is_break` (recess/assembly: shown, never given a lesson) |
+| `timetable_entries` | (year, class, section, `weekday` 0=Sunday…6, period, subject, nullable teacher, room); `unique(section, weekday, period)`; **partial unique `(year, teacher, weekday, period)` so a teacher can't be in two sections at once** |
+
+`validate_timetable_entry()`: no lessons in break periods, and a named teacher must be assigned that subject in that section
+(`teacher_assignments` stays the single source of truth). The school week is data: Sunday–Thursday columns always show; Friday/Saturday
+appear only if a lesson exists. Students/guardians see subject and room but not teacher names (the `teachers` table is not readable by them).
 
 ## Design choices worth knowing
 
