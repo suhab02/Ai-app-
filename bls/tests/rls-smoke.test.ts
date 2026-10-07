@@ -284,3 +284,37 @@ describe.runIf(hasEnv)("attendance & homework RLS (Phase 3)", () => {
     expect(res.error).not.toBeNull();
   });
 });
+
+describe.runIf(hasEnv)("assessments & results RLS (Phase 4)", () => {
+  it("a student sees only published results, and only their own", async () => {
+    const student = await signedInClient(DEMO.student);
+    const results = await student.from("assessment_results").select("assessment_id, student_id");
+    expect(results.error).toBeNull();
+    expect(results.data).toHaveLength(2); // the draft Monthly exam stays hidden
+    expect(new Set(results.data?.map((r) => r.student_id)).size).toBe(1);
+
+    const assessments = await student.from("assessments").select("name, is_published");
+    expect(assessments.data?.every((a) => a.is_published)).toBe(true);
+  });
+
+  it("a parent sees their child's published results; the other family sees none", async () => {
+    expect(((await (await signedInClient(DEMO.parent)).from("assessment_results").select("id")).data ?? []).length).toBe(2);
+    expect((await (await signedInClient(DEMO.parent2)).from("assessment_results").select("id")).data).toHaveLength(0);
+    expect((await (await signedInClient(DEMO.student2)).from("assessment_results").select("id")).data).toHaveLength(0);
+  });
+
+  it("the assigned teacher sees the draft too; the unassigned one sees nothing", async () => {
+    expect(((await (await signedInClient(DEMO.teacher)).from("assessments").select("id")).data ?? []).length).toBe(3);
+    expect((await (await signedInClient(DEMO.teacher2)).from("assessments").select("id")).data).toHaveLength(0);
+  });
+
+  it("students and parents cannot write marks or grading bands", async () => {
+    for (const email of [DEMO.student, DEMO.parent]) {
+      const client = await signedInClient(email);
+      const bands = await client.from("grading_scale_bands").update({ grade_point: 9 }).select();
+      expect(bands.data ?? []).toHaveLength(0);
+      const marks = await client.from("assessment_results").update({ marks_obtained: 50 }).select();
+      expect(marks.data ?? []).toHaveLength(0);
+    }
+  });
+});

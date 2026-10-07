@@ -23,7 +23,9 @@ file after a partial failure finishes the job instead of erroring on "already ex
 - `0006_attendance.sql` — `attendance_status` enum, `school_today()`, `attendance_records`, `validate_attendance()` trigger, RLS.
 - `0007_homework.sql` — `teaches_subject()` helper, `homework`, RLS.
 
-**Apply order matters**: run `0001` → `0007` in order; each depends on the previous ones.
+- `0008_assessments.sql` — grading scales + bands (Bangladesh default seeded), `assessments`, `assessment_results`, publish/lock triggers, RLS.
+
+**Apply order matters**: run `0001` → `0008` in order; each depends on the previous ones.
 
 ## Schema (Phase 1)
 
@@ -82,6 +84,26 @@ can never forge who marked a record.
 **School time zone:** "today" is `public.school_today()` = `now() at time zone 'Asia/Dhaka'`. The database runs in UTC, and
 Dhaka is UTC+6, so plain `current_date` would reject "today" for the first six hours of every school morning. Change the
 zone in that one function (and `src/lib/school/date.ts`) if the school is elsewhere.
+
+## Schema (Phase 4)
+
+| Table | Key columns / constraints |
+| --- | --- |
+| `grading_scales` / `grading_scale_bands` | grading is data, not code. A band covers every percentage `>= min_score` up to the next band's `min_score`, so bands can't overlap or leave gaps. One default scale (partial unique index). Seeded: A+ 80, A 70, A- 60, B 50, C 40, D 33, F 0 |
+| `assessments` | kind (CLASS_TEST, QUIZ, MONTHLY, TERM, ANNUAL, ASSIGNMENT, PRACTICAL, CUSTOM), `name`, `term`, `max_marks`, year/class/section/subject, `grading_scale_id`, `is_published` |
+| `assessment_results` | unique `(assessment_id, student_id)`; absent ⇒ `marks_obtained` NULL, otherwise marks required and `>= 0`; `entered_by` set from the session |
+
+**Assumption to confirm:** grade points are the usual Bangladeshi GPA values (A+ 5.0, A 4.0, A- 3.5, B 3.0, C 2.0, D 1.0, F 0). The
+brief only fixed the letter ranges; edit `grading_scale_bands` to change them. Whole-class exams are one assessment per section
+(simpler and lets RLS scope teachers exactly).
+
+Triggers: marks can't exceed `max_marks`; the student must be actively enrolled in the assessment's section; `max_marks` can't be
+lowered below marks already entered; an assessment with results can't be moved to another section; **once published, only staff
+can change the assessment or its marks** (service_role / SQL editor are trusted, as in migration 0002).
+
+Report card maths (`src/lib/results/report-card.ts`, unit-tested): per subject, sum(marks) / sum(max) across the term's published
+assessments (an absence counts as 0 but keeps its maximum); overall GPA = mean of subject grade points; **failing any subject fails
+the overall result** (GPA 0, lowest band's letter).
 
 ## Design choices worth knowing
 

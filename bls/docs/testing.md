@@ -16,7 +16,7 @@ npm test            # embedded Postgres (migrations twice + isolation) and atten
 
 ## Against a real Supabase project
 
-1. Create a project, then apply the migrations (`0001`…`0007`) in order — either paste each file into the SQL
+1. Create a project, then apply the migrations (`0001`…`0008`) in order — either paste each file into the SQL
    editor, or `supabase db push` if you have the CLI linked. **Order matters**: `0001_init.sql`
    before `0002_rls.sql` (see `docs/rls.md`).
 2. In the Supabase dashboard, enable the Google provider under Authentication → Providers, and add
@@ -55,6 +55,9 @@ npm test            # embedded Postgres (migrations twice + isolation) and atten
    - Teacher (`teacher@`): Attendance → pick 5-A → mark → Save; 5-B is not offered. Homework → only 5-A Mathematics / English can be posted.
    - Student/parent: Attendance shows summary cards, a month calendar and history; Homework shows 5-A items (student2/parent2 see none).
    - Try editing the URL: `?section=<5-B id>` as the teacher shows no roster; students cannot load a roster.
+   - Results: student/parent see Class Test 1 (Math 42/50, English 38/50) and a printable report card; the draft Monthly Exam is hidden.
+     As the teacher, open Results → the draft exam → Publish; then try editing marks (rejected) — staff can still correct them.
+   - Report card: Results → "Report card" → Print / save as PDF (sidebar and header are hidden in print).
    - The language switcher toggles every visible string between English and Bangla, immediately.
 
 ## What "Phase 1 passes" means

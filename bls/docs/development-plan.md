@@ -42,7 +42,15 @@ events, gallery, admissions, public website content, mobile app.
 - [x] Embedded-Postgres tests incl. the upsert path; live smoke tests; `attendanceSummary` unit tests
 - Not in Phase 3: homework attachments and student submissions (need a private Storage bucket + policies), per-period/per-subject attendance, attendance reports/export, absence notifications to guardians, editing homework in the UI
 
-## Phase 4+ (not started; requires explicit "Start Phase 4")
+## Phase 4 — Exams, results, report cards (done — awaiting verification against a live Supabase project)
+
+- [x] Configurable grading scales (Bangladesh default seeded); assessments of every kind in the brief; per-student results
+- [x] Marks hidden from students/guardians until published; frozen for teachers after publishing; classmates never see each other
+- [x] Teacher UI: create assessment, enter marks (absent supported), publish; student/parent results by term
+- [x] Printable report card (per subject %, letter, GP, overall GPA, pass/fail), grading logic unit-tested
+- Not in Phase 4: ranking/positions, weighted terms, comment/remark entry in the UI, PDF files (use print-to-PDF), editing the grading scale in the UI (edit rows)
+
+## Phase 5+ (not started)
 
 Exams/Results/Report cards → Timetable → Fees/Payments/Receipts →
 Notices/Events/Gallery → Admissions/public website/CMS → React Native/Expo mobile app.

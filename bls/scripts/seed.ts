@@ -279,6 +279,7 @@ async function seedSchoolData(admin: Admin, profileIds: Record<string, string>) 
   }
 
   await seedAttendanceAndHomework({ admin, yearId: year.id, classId: cls.id, sections, subjects, studentIds, teacherId: assignedTeacherId });
+  await seedAssessments({ admin, yearId: year.id, classId: cls.id, sectionId: sections.A, subjects, studentId: studentIds["student@brightlearning.test"] });
 
   console.log("\nSchool data ready: 2025-2026 / Class 5 (A, B) / 4 subjects / 2 students / 2 guardians / 2 teachers");
 }
@@ -353,6 +354,74 @@ async function seedAttendanceAndHomework(args: {
   }
 
   console.log("Attendance (5 days x 2 students) and 2 homework items ready");
+}
+
+
+/**
+ * Phase 4 sample data for 5-A: two PUBLISHED term-1 assessments (so the student/parent
+ * results and report card have content) and one unpublished monthly exam with marks
+ * (so you can see it stays hidden from students until the teacher publishes it).
+ */
+async function seedAssessments(args: {
+  admin: Admin;
+  yearId: string;
+  classId: string;
+  sectionId: string;
+  subjects: Record<string, string>;
+  studentId: string;
+}) {
+  const { admin, yearId, classId, sectionId, subjects, studentId } = args;
+  const items = [
+    { code: "MATH", name: "Class Test 1", kind: "CLASS_TEST" as const, term: "Term 1", max: 50, marks: 42, published: true },
+    { code: "ENG", name: "Class Test 1", kind: "CLASS_TEST" as const, term: "Term 1", max: 50, marks: 38, published: true },
+    { code: "MATH", name: "Monthly Exam (draft)", kind: "MONTHLY" as const, term: "Term 1", max: 100, marks: 77, published: false },
+  ];
+  for (const item of items) {
+    const { data: existing, error } = await admin
+      .from("assessments")
+      .select("id")
+      .eq("section_id", sectionId)
+      .eq("subject_id", subjects[item.code])
+      .eq("name", item.name)
+      .maybeSingle();
+    if (error) throw error;
+
+    let assessmentId = existing?.id;
+    if (!assessmentId) {
+      const created = await must(
+        `assessment ${item.name}`,
+        admin
+          .from("assessments")
+          .insert({
+            academic_year_id: yearId,
+            class_id: classId,
+            section_id: sectionId,
+            subject_id: subjects[item.code],
+            kind: item.kind,
+            name: item.name,
+            term: item.term,
+            max_marks: item.max,
+            assessment_date: schoolDate(-3),
+            is_published: false,
+          })
+          .select("id")
+          .single(),
+      );
+      assessmentId = created.id;
+    }
+
+    // Results first, publish last: a published assessment is frozen for non-staff writers.
+    const { error: resultError } = await admin
+      .from("assessment_results")
+      .upsert({ assessment_id: assessmentId, student_id: studentId, marks_obtained: item.marks, is_absent: false }, { onConflict: "assessment_id,student_id" });
+    if (resultError) throw resultError;
+
+    if (item.published) {
+      const { error: publishError } = await admin.from("assessments").update({ is_published: true }).eq("id", assessmentId);
+      if (publishError) throw publishError;
+    }
+  }
+  console.log("Assessments ready (2 published, 1 draft) for 5-A");
 }
 
 main().catch((error) => {

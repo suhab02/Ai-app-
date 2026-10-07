@@ -74,6 +74,14 @@ forged `marked_by`; `validate_class_section_year` (Phase 2) guards homework's ye
 CONFLICT DO UPDATE`. That path runs the INSERT trigger, then the INSERT policy, then the UPDATE trigger and policy, so it has
 its own tests in `tests/migrations.test.ts` (new day, existing day, wrong-section student, moving a row to a foreign section).
 
+## Phase 4 policies
+
+`assessments`: SELECT = staff / `teaches_subject` / (`is_published` AND `student_in_class_section`); INSERT/UPDATE/DELETE = staff or
+`teaches_subject`. `assessment_results`: SELECT = `can_grade_assessment` OR (`assessment_is_published` AND (`owns_student` OR
+`is_guardian_of_student`)); writes = `can_grade_assessment`. Two new SECURITY DEFINER helpers (`can_grade_assessment`,
+`assessment_is_published`) keep the policies one line each. The "published ⇒ frozen" rule lives in triggers because RLS cannot express
+"you may update this row only while it is a draft".
+
 ## `current_profile_role()` and recursion
 
 Any policy on `profiles` that needs to know the caller's role can't just `SELECT role FROM profiles

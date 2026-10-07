@@ -18,6 +18,7 @@ type DomainKey = keyof Dictionary["domain"];
 const LIVE_MODULES: Partial<Record<DomainKey, string>> = {
   attendance: "/dashboard/attendance",
   homework: "/dashboard/homework",
+  results: "/dashboard/results",
 };
 
 const ROLE_MODULES: Record<UserRole, DomainKey[]> = {

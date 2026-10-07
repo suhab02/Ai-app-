@@ -34,6 +34,16 @@ export type GuardianRelationship =
 
 export type Gender = "MALE" | "FEMALE" | "OTHER";
 
+export type AssessmentKind =
+  | "CLASS_TEST"
+  | "QUIZ"
+  | "MONTHLY"
+  | "TERM"
+  | "ANNUAL"
+  | "ASSIGNMENT"
+  | "PRACTICAL"
+  | "CUSTOM";
+
 export type AttendanceStatus = "PRESENT" | "ABSENT" | "LATE" | "EXCUSED" | "LEAVE";
 
 export type ProfileRow = {
@@ -210,6 +220,48 @@ export type HomeworkRow = {
   updated_at: string;
 };
 
+export type GradingScaleRow = { id: string; name: string; is_default: boolean; created_at: string };
+
+export type GradingBandRow = {
+  id: string;
+  scale_id: string;
+  letter: string;
+  min_score: number;
+  grade_point: number;
+  is_pass: boolean;
+};
+
+export type AssessmentRow = {
+  id: string;
+  academic_year_id: string;
+  class_id: string;
+  section_id: string;
+  subject_id: string;
+  kind: AssessmentKind;
+  name: string;
+  term: string;
+  max_marks: number;
+  grading_scale_id: string;
+  assessment_date: string;
+  is_published: boolean;
+  published_at: string | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type AssessmentResultRow = {
+  id: string;
+  assessment_id: string;
+  student_id: string;
+  marks_obtained: number | null;
+  is_absent: boolean;
+  remarks: string | null;
+  entered_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
 type Table<Row, Required extends keyof Row = never> = {
   Row: Row;
   Insert: Partial<Row> & Pick<Row, Required>;
@@ -241,6 +293,13 @@ export interface Database {
         AttendanceRecordRow,
         "student_id" | "academic_year_id" | "class_id" | "section_id" | "attendance_date" | "status"
       >;
+      grading_scales: Table<GradingScaleRow, "name">;
+      grading_scale_bands: Table<GradingBandRow, "scale_id" | "letter" | "min_score" | "grade_point">;
+      assessments: Table<
+        AssessmentRow,
+        "academic_year_id" | "class_id" | "section_id" | "subject_id" | "kind" | "name" | "term" | "max_marks"
+      >;
+      assessment_results: Table<AssessmentResultRow, "assessment_id" | "student_id">;
       homework: Table<
         HomeworkRow,
         "academic_year_id" | "class_id" | "section_id" | "subject_id" | "title" | "due_date"

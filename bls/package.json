@@ -11,7 +11,7 @@
     "seed": "tsx scripts/seed.ts",
     "test:rls": "vitest run tests/rls-smoke.test.ts",
     "test:migrations": "vitest run tests/migrations.test.ts",
-    "test": "vitest run tests/migrations.test.ts tests/attendance-summary.test.ts"
+    "test": "vitest run --exclude tests/rls-smoke.test.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",

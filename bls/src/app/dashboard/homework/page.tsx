@@ -3,12 +3,13 @@ import { ActionForm } from "@/components/admin/action-form";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Select } from "@/components/ui/select";
+import { SectionSubjectFields } from "@/components/school/section-subject-fields";
 import { getCurrentProfile } from "@/lib/auth/dal";
 import { createHomework, deleteHomework } from "@/lib/homework/actions";
 import { getDictionary } from "@/lib/i18n/dictionary";
 import { getLocale } from "@/lib/i18n/get-locale";
 import { schoolToday } from "@/lib/school/date";
+import { getSectionSubjectOptions } from "@/lib/school/assignment-options";
 import { getSectionLabeler } from "@/lib/school/labels";
 import { createClient } from "@/lib/supabase/server";
 
@@ -28,23 +29,13 @@ export default async function HomeworkPage() {
 
   // Everything below is read under the caller's RLS: students/guardians get their
   // section's homework, teachers their sections', staff everything.
-  const [homework, subjects, sections, assignments, me] = await Promise.all([
+  const [homework, options, me] = await Promise.all([
     db.from("homework").select("*").order("due_date", { ascending: true }),
-    db.from("subjects").select("id, name"),
-    isStaff ? db.from("sections").select("id") : Promise.resolve({ data: [] }),
-    isTeacher ? db.from("teacher_assignments").select("section_id, subject_id") : Promise.resolve({ data: [] }),
+    getSectionSubjectOptions(db, profile.role, label),
     isTeacher ? db.from("teachers").select("id").eq("profile_id", profile.id).maybeSingle() : Promise.resolve({ data: null }),
   ]);
-  const subjectName = new Map(subjects.data?.map((s) => [s.id, s.name]));
+  const subjectName = new Map(options.subjects.map((s) => [s.id, s.name]));
   const myTeacherId = me.data?.id;
-
-  const pairs = (assignments.data ?? [])
-    .map((a) => ({ value: `${a.section_id}:${a.subject_id}`, name: `${label(a.section_id)} · ${subjectName.get(a.subject_id) ?? ""}` }))
-    .sort((a, b) => a.name.localeCompare(b.name));
-  const sectionOptions = (sections.data ?? [])
-    .map((s) => ({ id: s.id, name: label(s.id) }))
-    .filter((o) => o.name)
-    .sort((a, b) => a.name.localeCompare(b.name));
 
   return (
     <div className="flex flex-col gap-4">
@@ -53,27 +44,11 @@ export default async function HomeworkPage() {
       {canPost && (
         <Card>
           <CardHeader><CardTitle>{t.post}</CardTitle></CardHeader>
-          {isTeacher && pairs.length === 0 ? (
+          {isTeacher && options.pairs.length === 0 ? (
             <p className="text-sm text-slate-500">{t.noAssignments}</p>
           ) : (
             <ActionForm action={createHomework} submitLabel={t.submit}>
-              {isTeacher ? (
-                <Select name="pair" label={t.classSubject} required defaultValue="">
-                  <option value="" disabled>{t.choose}</option>
-                  {pairs.map((p) => <option key={p.value} value={p.value}>{p.name}</option>)}
-                </Select>
-              ) : (
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                  <Select name="sectionId" label={t.section} required defaultValue="">
-                    <option value="" disabled>{t.choose}</option>
-                    {sectionOptions.map((o) => <option key={o.id} value={o.id}>{o.name}</option>)}
-                  </Select>
-                  <Select name="subjectId" label={t.subject} required defaultValue="">
-                    <option value="" disabled>{t.choose}</option>
-                    {subjects.data?.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-                  </Select>
-                </div>
-              )}
+              <SectionSubjectFields options={options} labels={t} />
               <Input name="title" label={t.titleField} maxLength={200} required />
               <div className="flex flex-col gap-1.5">
                 <label htmlFor="description" className="text-sm font-medium text-brand-navy">{t.description}</label>

@@ -236,6 +236,70 @@ await as("teacher", async () => {
   check("teacher deletes own homework", (await db.query(`delete from homework where teacher_id='${t1.id}' returning 1`)).rows.length === 1);
 });
 
+// ---- Phase 4: assessments, results, grading -----------------------------
+const r3 = await db.query<{ id: string }>(`insert into auth.users (email) values ('student3@x.test') returning id`);
+uid.student3 = r3.rows[0].id;
+await db.query(`update public.profiles set role='STUDENT', status='ACTIVE' where id=$1`, [uid.student3]);
+const s3 = await one(`insert into students(profile_id,admission_number,full_name) values ($1,'A-3','Student Three') returning id`, [uid.student3]);
+await db.query(`insert into student_enrollments(student_id,academic_year_id,class_id,section_id,roll_number) values ($1,$2,$3,$4,'7')`, [s3.id, yr.id, cls.id, secA.id]);
+
+check("default grading scale has 7 bands", (await count(`select 1 from grading_scale_bands`)) === 7);
+check("exactly one default scale", (await count(`select 1 from grading_scales where is_default`)) === 1);
+check("a second default scale is rejected", !!(await tryErr(`insert into grading_scales(name,is_default) values ('X',true)`)));
+
+const asmt = (secId: string, subjectId: string, name = "CT-1", max = 50) =>
+  `insert into assessments(academic_year_id,class_id,section_id,subject_id,kind,name,term,max_marks) values ('${yr.id}','${cls.id}','${secId}','${subjectId}','CLASS_TEST','${name}','Term 1',${max})`;
+let asmtId = "";
+await as("teacher", async () => {
+  check("teacher creates assessment for assigned subject/section", !(await tryErr(asmt(secA.id, sub.id))));
+  check("teacher cannot create for an unassigned subject", !!(await tryErr(asmt(secA.id, sub2.id))));
+  check("teacher cannot create for an unassigned section", !!(await tryErr(asmt(secB.id, sub.id))));
+  asmtId = (await db.query<{ id: string }>(`select id from assessments where name='CT-1'`)).rows[0].id;
+  const res = (studentId: string, marks: string, absent = false) =>
+    `insert into assessment_results(assessment_id,student_id,marks_obtained,is_absent) values ('${asmtId}','${studentId}',${marks},${absent})`;
+  check("teacher enters marks", !(await tryErr(res(s1.id, "45"))) && !(await tryErr(res(s3.id, "30"))));
+  check("marks above max rejected", !!(await tryErr(`update assessment_results set marks_obtained=51 where student_id='${s1.id}'`)));
+  check("negative marks rejected", !!(await tryErr(`update assessment_results set marks_obtained=-1 where student_id='${s1.id}'`)));
+  check("student from another section rejected", !!(await tryErr(res(s2.id, "10"))));
+  check("absent with marks rejected", !!(await tryErr(`update assessment_results set is_absent=true where student_id='${s3.id}'`)));
+  check("absent without marks accepted", !(await tryErr(`update assessment_results set is_absent=true, marks_obtained=null where student_id='${s3.id}'`)));
+  check("entered_by is the session user", (await db.query<{ entered_by: string }>(`select entered_by from assessment_results where student_id='${s1.id}'`)).rows[0]?.entered_by === uid.teacher);
+});
+for (const u of ["student1", "parent1", "student2", "parent2", "student3", "teacher2"]) {
+  await as(u, async () => {
+    check(`${u} sees no unpublished assessment`, (await count(`select 1 from assessments`)) === 0);
+    check(`${u} sees no unpublished results`, (await count(`select 1 from assessment_results`)) === 0);
+  });
+}
+await as("organizer", async () => check("organizer sees assessment and results", (await count(`select 1 from assessments`)) === 1 && (await count(`select 1 from assessment_results`)) === 2));
+await as("student1", async () => {
+  check("student cannot create assessment", !!(await tryErr(asmt(secA.id, sub.id, "Hack"))));
+  check("student cannot enter marks", !!(await tryErr(`insert into assessment_results(assessment_id,student_id,marks_obtained) values ('${asmtId}','${s1.id}',50)`)));
+  check("student cannot edit grading bands", (await db.query(`update grading_scale_bands set grade_point=9 returning 1`)).rows.length === 0);
+});
+await as("teacher", async () => check("teacher publishes", !(await tryErr(`update assessments set is_published=true where id='${asmtId}'`))));
+await as("student1", async () => {
+  check("student1 sees published assessment", (await count(`select 1 from assessments`)) === 1);
+  check("student1 sees ONLY own result (not classmate's)", (await count(`select 1 from assessment_results`)) === 1
+    && (await count(`select 1 from assessment_results where student_id='${s3.id}'`)) === 0);
+});
+await as("student3", async () => check("student3 sees only own result", (await count(`select 1 from assessment_results where student_id='${s3.id}'`)) === 1 && (await count(`select 1 from assessment_results`)) === 1));
+await as("parent1", async () => check("parent1 sees only their child's result", (await count(`select 1 from assessment_results`)) === 1 && (await count(`select 1 from assessment_results where student_id='${s1.id}'`)) === 1));
+await as("student2", async () => check("other-section student still sees nothing", (await count(`select 1 from assessments`)) === 0 && (await count(`select 1 from assessment_results`)) === 0));
+await as("parent2", async () => check("other-section parent still sees nothing", (await count(`select 1 from assessment_results`)) === 0));
+await as("teacher", async () => {
+  check("teacher cannot change marks after publish", !!(await tryErr(`update assessment_results set marks_obtained=50 where student_id='${s1.id}'`)));
+  check("teacher cannot edit a published assessment", !!(await tryErr(`update assessments set name='Changed' where id='${asmtId}'`)));
+  check("teacher cannot unpublish", !!(await tryErr(`update assessments set is_published=false where id='${asmtId}'`)));
+  check("teacher cannot delete a published assessment", (await db.query(`delete from assessments returning 1`).catch(() => ({ rows: [] }))).rows.length === 0);
+});
+await as("organizer", async () => {
+  check("staff can correct marks after publish", !(await tryErr(`update assessment_results set marks_obtained=48 where student_id='${s1.id}'`)));
+  check("max_marks cannot drop below entered marks", !!(await tryErr(`update assessments set max_marks=40 where id='${asmtId}'`)));
+  check("staff can unpublish", !(await tryErr(`update assessments set is_published=false where id='${asmtId}'`)));
+});
+await as("student1", async () => check("unpublished again hides marks from student", (await count(`select 1 from assessment_results`)) === 0));
+
 check("cannot link student record to TEACHER profile", !!(await tryErr(`insert into students(profile_id,admission_number,full_name) values ('${uid.teacher2}','Z-1','Z')`)));
 check("cannot link guardian record to STUDENT profile", !!(await tryErr(`insert into guardians(profile_id,full_name) values ('${uid.student1}','Z')`)));
 check("unlinked student record allowed", !(await tryErr(`insert into students(admission_number,full_name) values ('U-1','Unlinked')`)));
@@ -264,6 +328,6 @@ describe("migrations + RLS (embedded Postgres)", () => {
   it("applies idempotently and enforces isolation", async () => {
     const { pass, failures } = await run();
     expect(failures).toEqual([]);
-    expect(pass).toBeGreaterThan(90);
+    expect(pass).toBeGreaterThan(125);
   }, 120_000);
 });

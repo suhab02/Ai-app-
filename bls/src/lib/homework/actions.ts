@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/server";
 import { fields, friendly, zodMessage, type ActionResult } from "@/lib/server-actions";
 import { resolveSection } from "@/lib/school/resolve";
 import { isIsoDate } from "@/lib/school/date";
+import { parseSectionSubject } from "@/lib/school/section-subject";
 
 const CreateSchema = z.object({
   // Teachers pick one "sectionId:subjectId" pair from their own assignments;
@@ -24,8 +25,6 @@ const CreateSchema = z.object({
   dueDate: z.string().refine(isIsoDate, { error: "Choose a due date." }),
 });
 
-const Ids = z.object({ sectionId: z.uuid(), subjectId: z.uuid() });
-
 /**
  * Guard order: role check → Zod → RLS. For a TEACHER the database only accepts the
  * insert if that teacher owns the row (teacher_id = their own teachers.id, which
@@ -39,15 +38,11 @@ export async function createHomework(_prev: ActionResult, formData: FormData): P
   if (!parsed.success) return { error: zodMessage(parsed.error) };
   const input = parsed.data;
 
-  const [pairSection, pairSubject] = input.pair?.split(":") ?? [];
-  const ids = Ids.safeParse({
-    sectionId: input.pair ? pairSection : input.sectionId,
-    subjectId: input.pair ? pairSubject : input.subjectId,
-  });
-  if (!ids.success) return { error: "Choose a class section and subject." };
+  const ids = parseSectionSubject(input);
+  if (!ids) return { error: "Choose a class section and subject." };
 
   const db = await createClient();
-  const target = await resolveSection(db, ids.data.sectionId);
+  const target = await resolveSection(db, ids.sectionId);
   if (!target.ok) return { error: friendly(target.error) };
 
   let teacherId: string | null = null;
@@ -62,7 +57,7 @@ export async function createHomework(_prev: ActionResult, formData: FormData): P
     academic_year_id: target.academicYearId,
     class_id: target.classId,
     section_id: target.sectionId,
-    subject_id: ids.data.subjectId,
+    subject_id: ids.subjectId,
     teacher_id: teacherId,
     title: input.title,
     description: input.description ?? null,

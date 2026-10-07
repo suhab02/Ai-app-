@@ -70,6 +70,17 @@ against the student (`src/lib/attendance/summary.ts`, unit-tested).
 Known limitation: attendance records keep the section they were marked in, so if a student is moved mid-year the *old*
 section's teacher can still read the records made while the student was theirs. That is deliberate (it is their history).
 
+## Phase 4 access matrix (migration 0008)
+
+| Data | SUPER_ADMIN / ORGANIZER | TEACHER | STUDENT | PARENT | anon |
+| --- | --- | --- | --- | --- | --- |
+| grading scales / bands | read + write | read | read | read | none |
+| assessments | all | create/edit/publish for a (section, subject) they are assigned | published ones for their section | published ones for their child's section | none |
+| results (marks) | all, editable any time | enter/edit for their subject+section until published | **own row, published only** | **linked child's row, published only** | none |
+
+A classmate's marks are never visible to a student: result rows are matched on `owns_student` / `is_guardian_of_student`, not on section.
+Unpublishing is staff-only; after publication a teacher cannot change marks (the trigger rejects it).
+
 ## Original scope notes (Phase 2+ targets)
 
 - **ORGANIZER**: students, guardians, teachers, classes, sections, subjects, attendance, homework,

@@ -17,6 +17,7 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/dashboard", labelKey: "nav.dashboard" },
   { href: "/dashboard/attendance", labelKey: "domain.attendance" },
   { href: "/dashboard/homework", labelKey: "domain.homework" },
+  { href: "/dashboard/results", labelKey: "domain.results" },
   { href: "/dashboard/admin/users", labelKey: "nav.users", roles: STAFF },
   { href: "/dashboard/admin/academic", labelKey: "nav.academic", roles: STAFF },
   { href: "/dashboard/admin/people", labelKey: "nav.people", roles: STAFF },
@@ -29,7 +30,7 @@ function visibleItems(role: UserRole) {
 
 export function Sidebar({ dictionary, role }: { dictionary: Dictionary; role: UserRole }) {
   return (
-    <aside className="hidden w-56 shrink-0 flex-col gap-1 border-r border-slate-200 bg-surface-card p-4 sm:flex">
+    <aside className="hidden print:hidden w-56 shrink-0 flex-col gap-1 border-r border-slate-200 bg-surface-card p-4 sm:flex">
       {visibleItems(role).map((item) => (
         <Link
           key={item.href}
@@ -45,7 +46,7 @@ export function Sidebar({ dictionary, role }: { dictionary: Dictionary; role: Us
 
 export function BottomNav({ dictionary, role }: { dictionary: Dictionary; role: UserRole }) {
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-10 flex overflow-x-auto border-t border-slate-200 bg-surface-card sm:hidden">
+    <nav className="fixed inset-x-0 bottom-0 z-10 flex print:hidden overflow-x-auto border-t border-slate-200 bg-surface-card sm:hidden">
       {visibleItems(role).map((item) => (
         <Link
           key={item.href}
