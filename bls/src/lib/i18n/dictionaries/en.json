@@ -124,6 +124,12 @@
       "PAID": "Paid",
       "OVERDUE": "Overdue",
       "VOID": "Void"
+    },
+    "audience": {
+      "ALL": "Everyone",
+      "TEACHERS": "Teachers",
+      "STUDENTS": "Students",
+      "PARENTS": "Guardians"
     }
   },
   "admin": {
@@ -387,5 +393,55 @@
       "back": "Back to fees",
       "reference": "Reference"
     }
+  },
+  "notices": {
+    "title": "Notices & events",
+    "notices": "Notices",
+    "events": "Events",
+    "noNotices": "No notices right now.",
+    "noEvents": "No upcoming events.",
+    "newNotice": "New notice",
+    "newEvent": "New event",
+    "noticeTitle": "Title",
+    "body": "Message",
+    "audience": "Audience",
+    "target": "Target",
+    "everyone": "Whole school",
+    "pinned": "Pin to top",
+    "publishNow": "Publish now",
+    "public": "Show on the public website",
+    "expires": "Expires on",
+    "save": "Save",
+    "publish": "Publish",
+    "unpublish": "Unpublish",
+    "delete": "Delete",
+    "draft": "Draft",
+    "scheduled": "Scheduled",
+    "expired": "Expired",
+    "starts": "Starts",
+    "ends": "Ends",
+    "location": "Location",
+    "description": "Description",
+    "publicNote": "Public items must be for everyone and cannot target a section."
+  },
+  "gallery": {
+    "title": "Gallery",
+    "newAlbum": "New album",
+    "albumTitle": "Title",
+    "albumTitleBn": "Title (Bangla)",
+    "description": "Description",
+    "published": "Published",
+    "draft": "Draft (hidden)",
+    "publish": "Publish",
+    "unpublish": "Unpublish",
+    "upload": "Upload photo",
+    "album": "Album",
+    "image": "Image (JPG, PNG or WebP, up to 5 MB)",
+    "caption": "Caption",
+    "delete": "Delete",
+    "noAlbums": "No albums yet.",
+    "noPhotos": "No photos yet.",
+    "choose": "Choose…",
+    "create": "Create"
   }
 }

@@ -34,6 +34,8 @@ export type GuardianRelationship =
 
 export type Gender = "MALE" | "FEMALE" | "OTHER";
 
+export type NoticeAudience = "ALL" | "TEACHERS" | "STUDENTS" | "PARENTS";
+
 export type PaymentMethod = "CASH" | "BANK" | "BKASH" | "NAGAD" | "ROCKET" | "CARD" | "ONLINE" | "OTHER";
 
 export type PaymentStatus = "PENDING" | "PAID" | "FAILED" | "REFUNDED" | "PARTIAL";
@@ -323,6 +325,59 @@ export type PaymentRow = {
   updated_at: string;
 };
 
+export type NoticeRow = {
+  id: string;
+  title: string;
+  body: string;
+  audience: NoticeAudience;
+  section_id: string | null;
+  is_published: boolean;
+  published_at: string | null;
+  expires_at: string | null;
+  is_pinned: boolean;
+  is_public: boolean;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type EventRow = {
+  id: string;
+  title: string;
+  description: string | null;
+  starts_at: string;
+  ends_at: string | null;
+  location: string | null;
+  audience: NoticeAudience;
+  is_published: boolean;
+  is_public: boolean;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type GalleryAlbumRow = {
+  id: string;
+  title: string;
+  title_bn: string | null;
+  description: string | null;
+  is_published: boolean;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type GalleryPhotoRow = {
+  id: string;
+  album_id: string;
+  storage_path: string;
+  caption: string | null;
+  caption_bn: string | null;
+  sort_order: number;
+  created_by: string | null;
+  created_at: string;
+};
+
 type Table<Row, Required extends keyof Row = never> = {
   Row: Row;
   Insert: Partial<Row> & Pick<Row, Required>;
@@ -369,6 +424,10 @@ export interface Database {
       fee_types: Table<FeeTypeRow, "code" | "name">;
       invoices: Table<InvoiceRow, "student_id" | "academic_year_id" | "fee_type_id" | "amount_due" | "due_date">;
       payments: Table<PaymentRow, "invoice_id" | "amount" | "method">;
+      notices: Table<NoticeRow, "title" | "body">;
+      events: Table<EventRow, "title" | "starts_at">;
+      gallery_albums: Table<GalleryAlbumRow, "title">;
+      gallery_photos: Table<GalleryPhotoRow, "album_id" | "storage_path">;
       homework: Table<
         HomeworkRow,
         "academic_year_id" | "class_id" | "section_id" | "subject_id" | "title" | "due_date"

@@ -280,6 +280,7 @@ async function seedSchoolData(admin: Admin, profileIds: Record<string, string>) 
 
   await seedAttendanceAndHomework({ admin, yearId: year.id, classId: cls.id, sections, subjects, studentIds, teacherId: assignedTeacherId });
   await seedTimetable({ admin, yearId: year.id, classId: cls.id, sectionId: sections.A, subjects, teacherId: assignedTeacherId });
+  await seedCommunications({ admin, sectionAId: sections.A });
   await seedFees({ admin, yearId: year.id, studentIds });
   await seedAssessments({ admin, yearId: year.id, classId: cls.id, sectionId: sections.A, subjects, studentId: studentIds["student@brightlearning.test"] });
 
@@ -543,6 +544,68 @@ async function seedFees(args: { admin: Admin; yearId: string; studentIds: Record
     }
   }
   console.log("Fees ready (Tuition: Tanvir part-paid, Rafi unpaid)");
+}
+
+
+// A valid 1x1 PNG, so the seeded gallery photo is a real image the validators would accept.
+const TINY_PNG = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
+
+/**
+ * Phase 7 sample data: one public notice, one section-only notice, one students-only notice, a public
+ * event, and a published album with one real image in the public bucket. Runs as service_role, so it
+ * can write to Storage directly; the app itself always uploads as the signed-in staff user.
+ */
+async function seedCommunications(args: { admin: Admin; sectionAId: string }) {
+  const { admin, sectionAId } = args;
+
+  const notices = [
+    { title: "Welcome back to school", body: "Classes resume on Sunday. We look forward to seeing every family.", audience: "ALL" as const, is_public: true, is_pinned: true },
+    { title: "Class 5-A: bring your science kits", body: "Science practical on Tuesday.", audience: "ALL" as const, section_id: sectionAId },
+    { title: "Students: library cards", body: "Collect your library card from the office.", audience: "STUDENTS" as const },
+  ];
+  for (const n of notices) {
+    const { data: existing, error } = await admin.from("notices").select("id").eq("title", n.title).maybeSingle();
+    if (error) throw error;
+    if (existing) continue;
+    const { error: insertError } = await admin.from("notices").insert({ ...n, is_published: true });
+    if (insertError) throw insertError;
+  }
+
+  const eventTitle = "Annual Sports Day";
+  const { data: existingEvent, error: eventError } = await admin.from("events").select("id").eq("title", eventTitle).maybeSingle();
+  if (eventError) throw eventError;
+  if (!existingEvent) {
+    const { error } = await admin.from("events").insert({
+      title: eventTitle,
+      description: "Races, relay and prize-giving. Families welcome.",
+      starts_at: new Date(Date.now() + 14 * 86400000).toISOString(),
+      location: "School field",
+      audience: "ALL",
+      is_published: true,
+      is_public: true,
+    });
+    if (error) throw error;
+  }
+
+  const albumTitle = "Annual Day 2025";
+  const { data: existingAlbum, error: albumError } = await admin.from("gallery_albums").select("id").eq("title", albumTitle).maybeSingle();
+  if (albumError) throw albumError;
+  const album =
+    existingAlbum ??
+    (await must(
+      "album",
+      admin.from("gallery_albums").insert({ title: albumTitle, title_bn: "বার্ষিক দিবস ২০২৫", is_published: true }).select("id").single(),
+    ));
+  const photoId = "00000000-0000-4000-8000-000000000001";
+  const path = `albums/${album.id}/${photoId}.png`;
+  const uploaded = await admin.storage.from("gallery-public").upload(path, Buffer.from(TINY_PNG, "base64"), { contentType: "image/png", upsert: true });
+  if (uploaded.error) throw uploaded.error;
+  const { error: photoError } = await admin
+    .from("gallery_photos")
+    .upsert({ id: photoId, album_id: album.id, storage_path: path, caption: "Opening ceremony" }, { onConflict: "storage_path" });
+  if (photoError) throw photoError;
+
+  console.log("Communications ready (3 notices, 1 public event, 1 album with a photo)");
 }
 
 main().catch((error) => {

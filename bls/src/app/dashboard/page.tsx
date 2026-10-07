@@ -21,6 +21,9 @@ const LIVE_MODULES: Partial<Record<DomainKey, string>> = {
   results: "/dashboard/results",
   timetable: "/dashboard/timetable",
   fees: "/dashboard/fees",
+  notices: "/dashboard/notices",
+  events: "/dashboard/notices",
+  gallery: "/dashboard/gallery",
 };
 
 const ROLE_MODULES: Record<UserRole, DomainKey[]> = {

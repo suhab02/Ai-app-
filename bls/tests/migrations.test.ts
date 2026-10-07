@@ -32,6 +32,14 @@ await db.exec(`
   grant usage on schema auth to anon, authenticated, service_role;
   grant execute on function auth.uid() to anon, authenticated, service_role;
   grant usage on schema public to anon, authenticated, service_role;
+
+  -- Minimal stand-in for Supabase Storage so the bucket + storage.objects policies really execute.
+  create schema storage;
+  create table storage.buckets (id text primary key, name text, public boolean default false, file_size_limit bigint, allowed_mime_types text[]);
+  create table storage.objects (id uuid primary key default gen_random_uuid(), bucket_id text references storage.buckets (id), name text, owner uuid, created_at timestamptz default now());
+  alter table storage.objects enable row level security;
+  grant usage on schema storage to anon, authenticated, service_role;
+  grant select, insert, update, delete on storage.objects to anon, authenticated;
 `);
 
 // Apply every migration TWICE to prove idempotency.
@@ -425,6 +433,94 @@ for (const u of ["anon", "student1"]) {
 }
 check("anon cannot read invoices", !!(await as("anon", () => tryErr(`select * from invoices`))));
 
+// ---- Phase 7: notices, events, gallery, storage -----------------------------
+const noticeSql = (title: string, audience: string, opts: { section?: string; published?: boolean; isPublic?: boolean; publishedAt?: string; expiresAt?: string } = {}) =>
+  `insert into notices(title,body,audience,section_id,is_published,is_public,published_at,expires_at) values ('${title}','body','${audience}',${opts.section ? `'${opts.section}'` : "null"},${opts.published ?? true},${opts.isPublic ?? false},${opts.publishedAt ?? "null"},${opts.expiresAt ?? "null"})`;
+await as("organizer", async () => {
+  check("notice: All", !(await tryErr(noticeSql("All", "ALL"))));
+  check("notice: Students", !(await tryErr(noticeSql("Students", "STUDENTS"))));
+  check("notice: Parents", !(await tryErr(noticeSql("Parents", "PARENTS"))));
+  check("notice: Teachers", !(await tryErr(noticeSql("Teachers", "TEACHERS"))));
+  check("notice: Draft", !(await tryErr(noticeSql("Draft", "ALL", { published: false }))));
+  check("notice: Expired", !(await tryErr(noticeSql("Expired", "ALL", { publishedAt: "now() - interval '2 hours'", expiresAt: "now() - interval '1 hour'" }))));
+  check("notice: Scheduled (future)", !(await tryErr(noticeSql("Scheduled", "ALL", { publishedAt: "now() + interval '1 day'" }))));
+  check("notice: SectionA", !(await tryErr(noticeSql("SectionA", "ALL", { section: secA.id }))));
+  check("notice: Public", !(await tryErr(noticeSql("Public", "ALL", { isPublic: true }))));
+  check("a public notice must be for everyone", !!(await tryErr(noticeSql("Bad1", "STUDENTS", { isPublic: true }))));
+  check("a public notice cannot target a section", !!(await tryErr(noticeSql("Bad2", "ALL", { section: secA.id, isPublic: true }))));
+  check("publishing stamps published_at", (await db.query<{ ok: boolean }>(`select published_at is not null as ok from notices where title='All'`)).rows[0].ok);
+});
+const titles = async () => (await db.query<{ title: string }>(`select title from notices order by title`)).rows.map((r) => r.title).join(",");
+await as("student1", async () => check("student in 5-A sees the right notices", (await titles()) === "All,Public,SectionA,Students", await titles()));
+await as("student2", async () => check("student in 5-B does not see 5-A's notice", (await titles()) === "All,Public,Students", await titles()));
+await as("parent1", async () => check("guardian sees parent + section notices", (await titles()) === "All,Parents,Public,SectionA", await titles()));
+await as("parent2", async () => check("other guardian does not see 5-A's notice", (await titles()) === "All,Parents,Public", await titles()));
+await as("teacher", async () => check("teacher of 5-A sees teacher + section notices", (await titles()) === "All,Public,SectionA,Teachers", await titles()));
+await as("teacher2", async () => check("unassigned teacher does not see 5-A's notice", (await titles()) === "All,Public,Teachers", await titles()));
+await as("organizer", async () => check("staff see everything incl. drafts, expired and scheduled", (await count(`select 1 from notices`)) === 9));
+await as("anon", async () => check("anonymous visitors see ONLY the public, published, current notice", (await titles()) === "Public", await titles()));
+for (const u of ["student1", "parent1", "teacher", "anon"]) {
+  await as(u, async () => {
+    check(`${u} cannot write notices`, !!(await tryErr(noticeSql("Hack", "ALL"))));
+    check(`${u} cannot edit notices`, (await db.query(`update notices set title='x' returning 1`).catch(() => ({ rows: [] }))).rows.length === 0);
+  });
+}
+
+await as("organizer", async () => {
+  check("event: public sports day", !(await tryErr(`insert into events(title,starts_at,is_published,is_public) values ('Sports Day', now() + interval '10 days', true, true)`)));
+  check("event: teachers-only meeting", !(await tryErr(`insert into events(title,starts_at,audience,is_published) values ('Staff meeting', now() + interval '3 days', 'TEACHERS', true)`)));
+  check("event: draft", !(await tryErr(`insert into events(title,starts_at) values ('Draft event', now() + interval '5 days')`)));
+  check("a public event must be for everyone", !!(await tryErr(`insert into events(title,starts_at,audience,is_published,is_public) values ('Bad', now(), 'TEACHERS', true, true)`)));
+  check("event end cannot precede start", !!(await tryErr(`insert into events(title,starts_at,ends_at) values ('Bad', now(), now() - interval '1 hour')`)));
+});
+await as("student1", async () => check("student sees only the published ALL event", (await count(`select 1 from events`)) === 1));
+await as("teacher", async () => check("teacher also sees the teachers-only event", (await count(`select 1 from events`)) === 2));
+await as("anon", async () => check("anonymous visitors see only the public event", (await count(`select 1 from events`)) === 1));
+await as("organizer", async () => check("staff see all events", (await count(`select 1 from events`)) === 3));
+
+const albumPub = await one(`insert into gallery_albums(title,is_published) values ('Annual Day', true) returning id`);
+const albumDraft = await one(`insert into gallery_albums(title,is_published) values ('Unreleased', false) returning id`);
+const photoSql = (albumId: string, path?: string) =>
+  `insert into gallery_photos(album_id,storage_path) values ('${albumId}', ${path ? `'${path}'` : `'albums/${albumId}/' || gen_random_uuid() || '.jpg'`})`;
+await as("organizer", async () => {
+  check("staff add a photo to a published album", !(await tryErr(photoSql(albumPub.id))));
+  check("staff add a photo to a draft album", !(await tryErr(photoSql(albumDraft.id))));
+  check("path traversal rejected", !!(await tryErr(photoSql(albumPub.id, "albums/../../etc/passwd"))));
+  check("non-image extension rejected", !!(await tryErr(photoSql(albumPub.id, `albums/${albumPub.id}/${albumPub.id}.exe`))));
+  check("path outside albums/ rejected", !!(await tryErr(photoSql(albumPub.id, `other/${albumPub.id}/${albumPub.id}.jpg`))));
+});
+for (const u of ["anon", "student1", "parent2"]) {
+  await as(u, async () => check(`${u} sees only the published album and its photo`, (await count(`select 1 from gallery_albums`)) === 1 && (await count(`select 1 from gallery_photos`)) === 1));
+}
+await as("organizer", async () => check("staff see drafts too", (await count(`select 1 from gallery_albums`)) === 2 && (await count(`select 1 from gallery_photos`)) === 2));
+for (const u of ["anon", "student1", "teacher"]) {
+  await as(u, async () => check(`${u} cannot write gallery rows`, !!(await tryErr(`insert into gallery_albums(title) values ('x')`)) && !!(await tryErr(photoSql(albumPub.id)))));
+}
+
+check("gallery bucket: public, 5 MB, images only", (await count(`select 1 from storage.buckets where id='gallery-public' and public and file_size_limit=5242880 and allowed_mime_types = array['image/jpeg','image/png','image/webp']`)) === 1);
+check("documents bucket is PRIVATE", (await count(`select 1 from storage.buckets where id='student-documents' and not public`)) === 1);
+const objectSql = (bucket: string, name: string) => `insert into storage.objects(bucket_id,name) values ('${bucket}','${name}')`;
+const galleryName = `albums/${albumPub.id}/${albumPub.id}.png`;
+await as("organizer", async () => {
+  check("staff upload a gallery image", !(await tryErr(objectSql("gallery-public", galleryName))));
+  check("gallery rejects odd names", !!(await tryErr(objectSql("gallery-public", "albums/../x.jpg"))) && !!(await tryErr(objectSql("gallery-public", `albums/${albumPub.id}/${albumPub.id}.gif`))));
+  check("staff upload a student document", !(await tryErr(objectSql("student-documents", `${s1.id}/birth-certificate.pdf`))));
+  check("documents must live in a student's folder", !!(await tryErr(objectSql("student-documents", "loose/file.pdf"))));
+});
+for (const u of ["student1", "parent1", "teacher", "anon"]) {
+  await as(u, async () => {
+    check(`${u} cannot upload to the gallery`, !!(await tryErr(objectSql("gallery-public", `albums/${albumPub.id}/${albumDraft.id}.jpg`))));
+    check(`${u} cannot upload documents`, !!(await tryErr(objectSql("student-documents", `${s1.id}/x.pdf`))));
+  });
+}
+await as("student1", async () => check("student reads their OWN documents", (await count(`select 1 from storage.objects where bucket_id='student-documents'`)) === 1));
+await as("parent1", async () => check("guardian reads their child's documents", (await count(`select 1 from storage.objects where bucket_id='student-documents'`)) === 1));
+for (const u of ["student2", "parent2", "teacher", "teacher2", "anon"]) {
+  await as(u, async () => check(`${u} cannot see another student's documents`, (await count(`select 1 from storage.objects where bucket_id='student-documents'`)) === 0));
+}
+await as("student1", async () => check("student cannot delete documents", (await db.query(`delete from storage.objects where bucket_id='student-documents' returning 1`)).rows.length === 0));
+await as("organizer", async () => check("staff can delete documents", (await db.query(`delete from storage.objects where bucket_id='student-documents' returning 1`)).rows.length === 1));
+
 check("cannot link student record to TEACHER profile", !!(await tryErr(`insert into students(profile_id,admission_number,full_name) values ('${uid.teacher2}','Z-1','Z')`)));
 check("cannot link guardian record to STUDENT profile", !!(await tryErr(`insert into guardians(profile_id,full_name) values ('${uid.student1}','Z')`)));
 check("unlinked student record allowed", !(await tryErr(`insert into students(admission_number,full_name) values ('U-1','Unlinked')`)));
@@ -453,6 +549,6 @@ describe("migrations + RLS (embedded Postgres)", () => {
   it("applies idempotently and enforces isolation", async () => {
     const { pass, failures } = await run();
     expect(failures).toEqual([]);
-    expect(pass).toBeGreaterThan(210);
+    expect(pass).toBeGreaterThan(290);
   }, 120_000);
 });

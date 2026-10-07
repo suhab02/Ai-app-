@@ -394,3 +394,48 @@ describe.runIf(hasEnv)("fees RLS (Phase 6)", () => {
     expect(res.error).not.toBeNull();
   });
 });
+
+describe.runIf(hasEnv)("notices, events & gallery RLS (Phase 7)", () => {
+  it("anonymous visitors see only public items and published albums", async () => {
+    const anon = anonClient();
+    const notices = await anon.from("notices").select("title, is_public");
+    expect(notices.error).toBeNull();
+    expect(notices.data?.every((n) => n.is_public)).toBe(true);
+    expect(((await anon.from("events").select("id, is_public")).data ?? []).every((e) => e.is_public)).toBe(true);
+    expect(((await anon.from("gallery_albums").select("is_published")).data ?? []).every((a) => a.is_published)).toBe(true);
+  });
+
+  it("anonymous visitors cannot write anything", async () => {
+    const anon = anonClient();
+    expect((await anon.from("notices").insert({ title: "x", body: "y" })).error).not.toBeNull();
+    expect((await anon.from("gallery_albums").insert({ title: "x" })).error).not.toBeNull();
+  });
+
+  it("a section notice reaches that section's family only", async () => {
+    const a = await (await signedInClient(DEMO.parent)).from("notices").select("title");
+    const b = await (await signedInClient(DEMO.parent2)).from("notices").select("title");
+    expect(a.data?.some((n) => n.title.includes("5-A"))).toBe(true);
+    expect(b.data?.some((n) => n.title.includes("5-A"))).toBe(false);
+  });
+
+  it("students-only notices are not shown to parents", async () => {
+    const parent = await (await signedInClient(DEMO.parent)).from("notices").select("title");
+    const student = await (await signedInClient(DEMO.student)).from("notices").select("title");
+    expect(parent.data?.some((n) => n.title.startsWith("Students:"))).toBe(false);
+    expect(student.data?.some((n) => n.title.startsWith("Students:"))).toBe(true);
+  });
+
+  it("only staff can post notices or upload to the gallery bucket", async () => {
+    const student = await signedInClient(DEMO.student);
+    expect((await student.from("notices").insert({ title: "x", body: "y" })).error).not.toBeNull();
+    const blob = new Blob([Uint8Array.from([0x89, 0x50, 0x4e, 0x47])], { type: "image/png" });
+    const upload = await student.storage.from("gallery-public").upload(`albums/${crypto.randomUUID()}/${crypto.randomUUID()}.png`, blob);
+    expect(upload.error).not.toBeNull();
+  });
+
+  it("private student documents are not readable by another family", async () => {
+    const other = await signedInClient(DEMO.parent2);
+    const list = await other.storage.from("student-documents").list();
+    expect(list.error || (list.data ?? []).length === 0).toBeTruthy();
+  });
+});

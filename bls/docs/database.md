@@ -29,7 +29,9 @@ file after a partial failure finishes the job instead of erroring on "already ex
 
 - `0010_fees.sql` — `fee_types`, `invoices`, `payments`, receipt numbering, ledger triggers, RLS, and revokes API access to internal functions.
 
-**Apply order matters**: run `0001` → `0010` in order; each depends on the previous ones.
+- `0011_notices_events_gallery.sql` — `notices`, `events`, `gallery_albums`/`gallery_photos`, audience helpers, **anon-readable policies**, Storage buckets + `storage.objects` policies.
+
+**Apply order matters**: run `0001` → `0011` in order; each depends on the previous ones.
 
 ## Schema (Phase 1)
 
@@ -138,6 +140,18 @@ database, never from the request.
 
 **Not built:** live gateway integration (bKash/Nagad/Rocket/card need merchant credentials) — Phase 6 *records* how a payment was made;
 an ONLINE/BKASH row today means "staff recorded it". Wiring a gateway would add a webhook route that inserts PENDING→PAID rows.
+
+## Schema (Phase 7)
+
+| Table / bucket | Notes |
+| --- | --- |
+| `notices` | `audience` ALL/TEACHERS/STUDENTS/PARENTS, optional `section_id`, `is_published`, `published_at` (future = scheduled), `expires_at`, `is_pinned`, `is_public`; CHECK: a public notice must be `ALL` and not section-targeted |
+| `events` | `starts_at`/`ends_at`, `audience`, `is_published`, `is_public` (public ⇒ `ALL`) |
+| `gallery_albums` / `gallery_photos` | photos store a server-generated `storage_path`; a CHECK pins it to `albums/<uuid>/<uuid>.(jpg|png|webp)` so path tricks can't be stored |
+| bucket `gallery-public` | **public** read by URL, staff-only write, JPEG/PNG/WebP, 5 MB (set on the bucket itself) |
+| bucket `student-documents` | **private**, PDF/JPEG/PNG, 10 MB; objects live under `<student uuid>/…`; no upload UI yet |
+
+Public gallery files and private student documents are separate buckets with separate policies on purpose: they must never share security assumptions.
 
 ## Design choices worth knowing
 

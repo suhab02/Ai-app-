@@ -65,7 +65,15 @@ events, gallery, admissions, public website content, mobile app.
 - [x] Internal functions no longer callable through the API (also fixes Phase 1's `generate_display_id`)
 - Not in Phase 6: live payment-gateway integration, server-rendered PDF files (print-to-PDF instead), fee discounts/waivers/late fees, SMS/email receipts
 
-## Phase 7+ (not started)
+## Phase 7 — Notices, events, gallery (done — awaiting verification against a live Supabase project)
+
+- [x] Audience-targeted notices (everyone / teachers / students / guardians, optionally one section), scheduling, expiry, pinning; events
+- [x] First anonymous-readable data (`is_public` rows, published albums) with narrow explicit policies; anon can never write
+- [x] Gallery in a PUBLIC bucket (staff-only write, images only, 5 MB, byte-sniffed validation, random server-chosen names)
+- [x] PRIVATE `student-documents` bucket with policies and tests (staff all; student / linked guardian read own folder)
+- Not in Phase 7: UI to upload/view student documents, notice read-receipts, push/SMS delivery, image resizing/thumbnails
+
+## Phase 8+ (not started)
 
 Exams/Results/Report cards → Timetable → Fees/Payments/Receipts →
 Notices/Events/Gallery → Admissions/public website/CMS → React Native/Expo mobile app.

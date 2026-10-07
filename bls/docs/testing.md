@@ -16,7 +16,7 @@ npm test            # embedded Postgres (migrations twice + isolation) and atten
 
 ## Against a real Supabase project
 
-1. Create a project, then apply the migrations (`0001`…`0010`) in order — either paste each file into the SQL
+1. Create a project, then apply the migrations (`0001`…`0011`) in order — either paste each file into the SQL
    editor, or `supabase db push` if you have the CLI linked. **Order matters**: `0001_init.sql`
    before `0002_rls.sql` (see `docs/rls.md`).
 2. In the Supabase dashboard, enable the Google provider under Authentication → Providers, and add
@@ -62,6 +62,9 @@ npm test            # embedded Postgres (migrations twice + isolation) and atten
      a teacher, shows the database's error. Student/parent see 5-A's grid; student2/parent2 (5-B) see none; the teacher sees "My lessons".
    - Fees: staff create a fee type/invoice, record a payment (try over-paying: refused), refund one (row stays, balance frees up). Parent/student see
      only their invoices; open a receipt → bilingual layout with ৳ amount; Print / save as PDF. A teacher has no Fees entry.
+   - Notices: staff post a section-only notice (5-A) — parent/student of 5-A see it, 5-B does not; a students-only notice is hidden from parents.
+     Mark one "show on the public website" (Phase 8 page) — logged-out visitors can read only those.
+   - Gallery (`/dashboard/gallery`, staff): create an album, upload a JPG/PNG/WebP (a renamed .exe or a >5 MB file is refused), publish it.
    - The language switcher toggles every visible string between English and Bangla, immediately.
 
 ## What "Phase 1 passes" means

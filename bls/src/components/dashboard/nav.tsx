@@ -21,6 +21,8 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/dashboard/results", labelKey: "domain.results" },
   { href: "/dashboard/timetable", labelKey: "domain.timetable" },
   { href: "/dashboard/fees", labelKey: "domain.fees", roles: FEE_ROLES },
+  { href: "/dashboard/notices", labelKey: "domain.notices" },
+  { href: "/dashboard/gallery", labelKey: "domain.gallery", roles: STAFF },
   { href: "/dashboard/admin/users", labelKey: "nav.users", roles: STAFF },
   { href: "/dashboard/admin/academic", labelKey: "nav.academic", roles: STAFF },
   { href: "/dashboard/admin/people", labelKey: "nav.people", roles: STAFF },

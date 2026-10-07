@@ -95,6 +95,18 @@ Unpublishing is staff-only; after publication a teacher cannot change marks (the
 | fee types | read + write | read | read | read | none |
 | invoices, payments, receipts | read + create/void/refund (never delete) | **none** | own | linked children's | none |
 
+## Phase 7 access matrix (migration 0011)
+
+| Data | SUPER_ADMIN / ORGANIZER | TEACHER | STUDENT | PARENT | anon (not logged in) |
+| --- | --- | --- | --- | --- | --- |
+| notices / events | all (incl. drafts, scheduled, expired) + write | published, current, addressed to teachers or everyone, or to a section they teach | … to students/everyone, or to their section | … to guardians/everyone, or to their child's section | **only** published + `is_public` + not expired |
+| gallery albums & photos | all + write | published | published | published | **published only** |
+| bucket `gallery-public` | upload / list / delete | read via public URL | same | same | same (public URL) |
+| bucket `student-documents` | all | none | **own folder** (read) | **linked child's folder** (read) | none |
+
+A section-targeted `STUDENTS` notice reaches that section's students only, not their guardians. Audience matching is done in the database
+(`audience_includes_caller`), not in the page.
+
 ## Original scope notes (Phase 2+ targets)
 
 - **ORGANIZER**: students, guardians, teachers, classes, sections, subjects, attendance, homework,

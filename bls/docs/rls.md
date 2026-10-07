@@ -96,6 +96,17 @@ Migration 0010 revokes EXECUTE from `public, anon, authenticated` on `next_recei
 from Phase 1 — `generate_display_id`. Triggers still work because they run as their `SECURITY DEFINER` owner. The embedded-Postgres test
 asserts that `anon` and a student get "permission denied" for all three.
 
+## Phase 7: the first anonymous access, and Storage
+
+Anon policies are separate `to anon` policies, each ending in the narrowest predicate (`is_published AND is_public AND not expired`), and
+`anon` gets `SELECT` grants only on those four tables. The migration adds no INSERT/UPDATE/DELETE for anon anywhere. The embedded-Postgres
+tests assert that anon sees exactly the one public notice, the one public event and the published album — and nothing else.
+
+Storage policies live on `storage.objects`: `gallery-public` is staff-only to write and the object name must match the generated pattern
+(blocking `../` tricks and other extensions); `student-documents` is readable only by staff, the student, or a linked guardian, keyed on the
+folder name (`document_student_id()` safely parses it). The test harness stubs `storage.buckets/objects` so these policies are executed,
+not just read. The migration is a no-op (with a NOTICE) on a database without Supabase Storage.
+
 ## `current_profile_role()` and recursion
 
 Any policy on `profiles` that needs to know the caller's role can't just `SELECT role FROM profiles

@@ -12,3 +12,6 @@ export function shiftDate(date: string, days: number): string {
 
 export const isIsoDate = (value: string | undefined): value is string =>
   !!value && /^\d{4}-\d{2}-\d{2}$/.test(value) && !Number.isNaN(Date.parse(`${value}T00:00:00Z`));
+
+/** Current time in ms. Server Components render per request, so reading the clock is intended; this keeps that explicit. */
+export const nowMs = (): number => Date.now();
